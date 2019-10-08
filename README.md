@@ -30,3 +30,8 @@ Players have cards of three types: A, B, or C.  Players may hold up to 5 cards a
 Players receive cards at the end of every round where they have attacked and conquered at least one enemy territory.  If a player X wipes out a player Y, then X takes all the cards of Y.  If taking Y's cards causes X to have more than 5 cards in his hand, he must trade in immediately, regardless of which turn phase he is in.
 
 A player is wiped out from the game if they lose all of their territories.  We may choose to include revival mechanics if we wish (TODO).
+
+## Notes
+- Changing the behavior of fns such as `attack-success-chance` can change gameplay to encourage more aggressive or defensive play.  Another interesting fn is `valid-troop-move?`: allowing players to move their troops more freely during the coordination phase can reward dynamic play.
+- Region bonus depends on the region.  Usually, regions which are large and less defensible have higher bonuses.
+- We can further extend the game by adding random events, economy management, special card effects, and more rules to turn this from a Risk clone into something closer to Civ.
