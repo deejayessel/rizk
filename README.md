@@ -6,9 +6,11 @@ A clojure clone of Risk
 - Region : a collection of territories with a special bonus (e.g. South America)
 - World : the collection of all territories in the game (to disambiguate with the map fn)
 
-## Rules
+## Gameplay
+### Starting out
 At the start of the game, players are randomly assigned a set of territories.  Player 1 places 4 troops in any collection of territories that they own.  Player 2 proceeds to do the same.  Once all players have placed troops, loop back to Player 1 and repeat until each player has placed 20 (TODO) troops.  
 
+### Turns
 Players take turns.  A turn consists of the distribution phase, attack phase, and coordination phase.  
 
 #### Distribution Phase
@@ -22,6 +24,7 @@ During the attack phase, a player may move troops from any territory with more t
 #### Coordination Phase
 During the coordination phase, a player may move their troops to locations within contiguous collections of territories (TODO).  Then the player may end their turn.
 
+### Cards
 Players have cards of three types: A, B, or C.  Players may hold up to 5 cards at a time.  Once a player has 5 cards, they must trade in their cards for troops.  Players may trade in any hand of 3-of-a-kind or 1-of-each-kind to receive N MUs, where N is the trade-in rate.  The trade-in rate (TODO) starts at 4 and goes up by a predetermined rule (e.g. up by 2s or by 20%) every time a player trades in their cards for troops.
 
 Players receive cards at the end of every round where they have attacked and conquered at least one enemy territory.  If a player X wipes out a player Y, then X takes all the cards of Y.  If taking Y's cards causes X to have more than 5 cards in his hand, he must trade in immediately, regardless of which turn phase he is in.
