@@ -7,7 +7,7 @@ A clojure clone of Risk
 - World : the collection of all territories in the game (to disambiguate with the map fn)
 
 ## Rules
-At the start of the game, players are randomly assigned a set of territories.  Player 1 places 4 troops in any collection of territories that they own.  Player 2 proceeds to the same.  Once all players have placed troops, loop back to Player 1 and repeat until each player has placed 20 troops.  
+At the start of the game, players are randomly assigned a set of territories.  Player 1 places 4 troops in any collection of territories that they own.  Player 2 proceeds to do the same.  Once all players have placed troops, loop back to Player 1 and repeat until each player has placed 20 (TODO) troops.  
 
 Players take turns.  A turn consists of the distribution phase, attack phase, and coordination phase.  
 
