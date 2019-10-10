@@ -1,4 +1,5 @@
-(ns rizk.maps.classic-map)
+(ns rizk.maps.classic-map
+  (:require [rizk.definitions :as definitions]))
 
 (def classic-map-definition
   {"Alaska"
