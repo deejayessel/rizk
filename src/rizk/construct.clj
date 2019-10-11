@@ -77,24 +77,6 @@
   {:pre [(pos-int? player-id) (<= 1 player-id (get-player-count state))]}
   (get-in state [:players player-id]))
 
-; TODO get-territories
-; TODO get-neighbors
-
-;(defn randomly-assign-territories
-;  "Randomly assigns all territories to players in game.
-;   All territories should be assigned, each territory
-;   should have only one owner."
-;  {:test (fn []
-;           (let [state (-> (create-empty-state 2)
-;                           (randomly-assign-territories))]
-;             ; TODO All territories assigned
-;             ; TODO Each territory has one owner
-;             ; TODO Number of territories is balanced
-;             ))}
-;  [state]
-;  state
-;  )
-
 (defn get-territories
   {:test (fn []
            (is= (-> (create-empty-state 3)
@@ -102,6 +84,15 @@
                 []))}
   [state player-id]
   (get-in state [:players player-id :territories]))
+
+(defn get-neighbors
+  {:test (fn []
+           (is= (get-neighbors "Indonesia")
+                ["New Guinea"
+                 "Western Australia"]))}
+  [territory-name]
+  (let [territory-defn (get-territory-defn territory-name)]
+    (:neighbors territory-defn)))
 
 (defn add-territory
   {:test (fn []
@@ -174,23 +165,22 @@
                                                    :c 0}}
                                   2 {:id          2
                                      :territories ["New Guinea"
-                                                   "Eastern Australia"] ;TODO
+                                                   "Eastern Australia"]
                                      :cards       {:a 0
                                                    :b 0
                                                    :c 0}}}
                  :ownership-map  {"Indonesia"         {:name        "Indonesia"
                                                        :owner-id    1
                                                        :troop-count 1}
-                                  "New Guinea"        {:name        "New Guinea"
-                                                       :owner-id    2
-                                                       :troop-count 1}
                                   "Western Australia" {:name        "Western Australia"
                                                        :owner-id    1
                                                        :troop-count 1}
-                                  "Eastern Australia" {:name        "Eastern Australia"
+                                  "New Guinea"        {:name        "New Guinea"
                                                        :owner-id    2
                                                        :troop-count 1}
-                                  }                         ;TODO
+                                  "Eastern Australia" {:name        "Eastern Australia"
+                                                       :owner-id    2
+                                                       :troop-count 1}}
                  :rules          {:initial-army-size          20
                                   :initial-reinforcement-size 5
                                   :initial-card-exchange-rate 4}}))}
