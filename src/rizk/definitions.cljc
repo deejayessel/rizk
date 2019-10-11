@@ -10,19 +10,54 @@
   [definitions]
   (swap! definitions-atom merge definitions))
 
-(defn get-definitions
+(defn get-all-definitions
   "Returns all definitions in the game."
+  {:test (fn []
+           (is= (get-all-definitions)
+                [{:name        "Indonesia"
+                  :entity-type :territory
+                  :neighbors   ["New Guinea"
+                                "Western Australia"]
+                  :region      "Australia"}
+
+                 {:name        "New Guinea"
+                  :entity-type :territory
+                  :neighbors   ["Indonesia"
+                                "Western Australia"
+                                "Eastern Australia"]
+                  :region      "Australia"}
+
+                 {:name        "Western Australia"
+                  :entity-type :territory
+                  :neighbors   ["Indonesia"
+                                "New Guinea"
+                                "Eastern Australia"]
+                  :region      "Australia"}
+
+                 {:name        "Eastern Australia"
+                  :entity-type :territory
+                  :neighbors   ["New Guinea"
+                                "Western Australia"]
+                  :region      "Australia"}
+
+                 {:name          "Australia"
+                  :entity-type   :region
+                  :bonus-initial 2
+                  :territories   ["Indonesia"
+                                  "New Guinea"
+                                  "Western Australia"
+                                  "Eastern Australia"]}]))}
   []
   (vals (deref definitions-atom)))
 
 (defn get-definition
-  "Gets the definition identified by the name."
   {:test (fn []
            (is= (get-definition "Eastern Australia")
-                {:name      "Eastern Australia"
-                 :neighbors ["New Guinea"
-                             "Western Australia"]
-                 :region    "Australia"})
+                {:name        "Eastern Australia"
+                 :entity-type :territory
+                 :neighbors   ["New Guinea"
+                               "Western Australia"]
+                 :region      "Australia"})
            ; The name can be present in a map with :name as a key
            (is= (get-definition {:name "Indonesia"})
                 (get-definition "Indonesia"))
