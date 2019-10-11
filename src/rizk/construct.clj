@@ -80,9 +80,15 @@
   {:test (fn []
            (is= (-> (create-empty-state 3)
                     (get-territories 1))
+                [])
+           (is= (-> (create-empty-state 3)
+                    (get-player 2)
+                    (get-territories))
                 []))}
-  [state player-id]
-  (get-in state [:players player-id :territories]))
+  ([player]
+   (:territories player))
+  ([state player-id]
+   (get-in state [:players player-id :territories])))
 
 (defn get-neighbors
   {:test (fn []
@@ -191,7 +197,13 @@
                                                        :troop-count 1}}
                  :rules          {:initial-army-size          20
                                   :initial-reinforcement-size 5
-                                  :initial-card-exchange-rate 4}}))}
+                                  :initial-card-exchange-rate 4}})
+           (is= (->> (create-game 3)
+                     (get-players)
+                     (map (fn [player]
+                            (count (get-territories player)))))
+                [2 1 1])
+           )}
   [num-players]
   (let [state (create-empty-state num-players)
         seed (:seed state)

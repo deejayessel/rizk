@@ -1,5 +1,5 @@
 (ns rizk.random
-  (:require [rizk.util :refer [ceiling]]
+  (:require [rizk.util :refer [floor ceiling]]
             [ysera.test :refer [is= is is-not error?]]
             [ysera.random :refer [random-nth
                                   shuffle-with-seed]]))
@@ -16,12 +16,29 @@
            ; test not all pieces have same size
            (is= (random-partition-with-seed 0 3 (range 20))
                 [667369761183368783
-                 [[0 2 12 13 4 18 6]
-                  [5 3 9 10 11 16 15]
-                  [19 17 8 7 14 1]]])
-           )}
+                 [[14 0 2 12 13 4 18]
+                  [1 6 5 3 9 10 11]
+                  [16 15 19 17 8 7]]])
+           (is= (->> (random-partition-with-seed 0 3 (range 4))
+                     (second)
+                     (map count))
+                [2 1 1]))}
   [seed n coll]
   (let [[seed, shuffled-coll] (shuffle-with-seed seed coll)
         coll-size (count coll)
-        piece-size (ceiling (/ coll-size n))]
-    [seed (partition-all piece-size shuffled-coll)]))
+        piece-size (floor (/ coll-size n))
+        partition-size (* n piece-size)
+        partitioned-coll (partition piece-size
+                                    (take partition-size shuffled-coll))
+        leftovers (drop partition-size shuffled-coll)]
+    [seed
+     (if (empty? leftovers)
+       partitioned-coll
+       (reduce-kv (fn [partitioned-coll i leftover]
+                    (update partitioned-coll i (fn [partition-piece]
+                                                 (conj partition-piece leftover))))
+                  (vec partitioned-coll)
+                  (vec leftovers)))]
+    ))
+
+
