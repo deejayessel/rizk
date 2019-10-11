@@ -124,22 +124,3 @@
   [territory-name]
   {:pre [(string? territory-name)]}
   (get-definition territory-name))
-
-;(defn get-neighbors
-;  {:test (fn []
-;           (is= (get-neighbors "Indonesia")
-;                ["New Guinea"
-;                 "Western Australia"]))}
-;  [territory-name]
-;  {:pre [(string? territory-name)]}
-;  (let [territory (get-territory territory-name)]
-;    (:neighbors territory)))
-;
-;(defn get-region
-;  {:test (fn []
-;           (is= (get-region "Indonesia")
-;                "Australia"))}
-;  [territory-name]
-;  {:pre [(string? territory-name)]}
-;  (let [territory (get-territory territory-name)]
-;    (:region territory)))

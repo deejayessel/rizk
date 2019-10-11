@@ -94,6 +94,15 @@
   (let [territory-defn (get-territory-defn territory-name)]
     (:neighbors territory-defn)))
 
+(defn get-region
+  {:test (fn []
+           (is= (get-region "Western Australia")
+                "Australia"))}
+  [territory-name]
+  {:pre [(string? territory-name)]}
+  (let [territory-defn (get-territory-defn territory-name)]
+    (:region territory-defn)))
+
 (defn add-territory
   {:test (fn []
            (let [state (-> (create-empty-state 3)
