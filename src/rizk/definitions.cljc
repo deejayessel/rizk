@@ -10,7 +10,7 @@
   [definitions]
   (swap! definitions-atom merge definitions))
 
-(defn get-all-definitions
+(defn- get-all-definitions
   "Returns all definitions in the game."
   {:test (fn []
            (is= (get-all-definitions)
@@ -50,7 +50,7 @@
   []
   (vals (deref definitions-atom)))
 
-(defn get-definition
+(defn- get-definition
   {:test (fn []
            (is= (get-definition "Eastern Australia")
                 {:name        "Eastern Australia"
@@ -75,3 +75,71 @@
     (when-not definition
       (error (str "The name " name-or-entity " does not exist. Are the definitions loaded?")))
     definition))
+
+(defn- get-entities-of-type
+  {:test (fn []
+           (is= (->> (get-entities-of-type :region)
+                     (map :name))
+                ["Australia"])
+           (is= (->> (get-entities-of-type :territory)
+                     (map :name))
+                ["Indonesia"
+                 "New Guinea"
+                 "Western Australia"
+                 "Eastern Australia"]))}
+  [entity-type]
+  {:pre [(keyword? entity-type)]}
+  (->> (get-all-definitions)
+       (filter (fn [entity]
+                 (= (:entity-type entity)
+                    entity-type)))))
+
+(defn get-region-defns
+  {:test (fn []
+           (is= (->> (get-region-defns)
+                     (map :name))
+                ["Australia"]))}
+  []
+  (get-entities-of-type :region))
+
+(defn get-all-territory-defns
+  {:test (fn []
+           (is= (->> (get-all-territory-defns)
+                     (map :name))
+                ["Indonesia"
+                 "New Guinea"
+                 "Western Australia"
+                 "Eastern Australia"]))}
+  []
+  (get-entities-of-type :territory))
+
+(defn get-territory-defn
+  {:test (fn []
+           (is= (get-territory-defn "Eastern Australia")
+                {:name        "Eastern Australia"
+                 :entity-type :territory
+                 :neighbors   ["New Guinea"
+                               "Western Australia"]
+                 :region      "Australia"}))}
+  [territory-name]
+  {:pre [(string? territory-name)]}
+  (get-definition territory-name))
+
+;(defn get-neighbors
+;  {:test (fn []
+;           (is= (get-neighbors "Indonesia")
+;                ["New Guinea"
+;                 "Western Australia"]))}
+;  [territory-name]
+;  {:pre [(string? territory-name)]}
+;  (let [territory (get-territory territory-name)]
+;    (:neighbors territory)))
+;
+;(defn get-region
+;  {:test (fn []
+;           (is= (get-region "Indonesia")
+;                "Australia"))}
+;  [territory-name]
+;  {:pre [(string? territory-name)]}
+;  (let [territory (get-territory territory-name)]
+;    (:region territory)))

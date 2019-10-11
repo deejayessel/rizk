@@ -1,7 +1,5 @@
 (ns rizk.random
-  (:require [rizk.definitions :refer [get-definition]]
-            [rizk.construct :refer [create-empty-state]]
-            [rizk.util :refer [ceiling]]
+  (:require [rizk.util :refer [ceiling]]
             [ysera.test :refer [is= is is-not error?]]
             [ysera.random :refer [random-nth
                                   shuffle-with-seed]]))
