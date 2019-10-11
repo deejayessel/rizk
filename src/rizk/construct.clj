@@ -199,12 +199,12 @@
         seed (:seed state)
         territory-names (->> (get-all-territory-defns)
                              (map :name))
-        [seed territory-name-partitions] (random-partition-with-seed seed num-players territory-names)
+        [_ territory-name-partitions] (random-partition-with-seed seed num-players territory-names)
         indexed-partitions (map-indexed (fn [i x] (list (+ i 1) x))
                                         territory-name-partitions)]
 
-    (-> (reduce (fn [state index-partition]
-                  (let [[player-index territory-names] index-partition]
-                    (add-territories state territory-names player-index)))
-                state
-                indexed-partitions))))
+    (reduce (fn [state index-partition]
+              (let [[player-index territory-names] index-partition]
+                (add-territories state territory-names player-index)))
+            state
+            indexed-partitions)))
