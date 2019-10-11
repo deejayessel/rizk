@@ -32,10 +32,10 @@
    :turn-phase     :distribution-phase
    :seed           0
    :players        (->> (range 1 (+ num-players 1))
-                        (map-indexed (fn [index player-num]
-                                       {:id          player-num
-                                        :territories []
-                                        :cards       {:a 0 :b 0 :c 0}}))
+                        (map (fn [player-num]
+                               {:id          player-num
+                                :territories []
+                                :cards       {:a 0 :b 0 :c 0}}))
                         (reduce (fn [a v]
                                   (assoc a (:id v) v))
                                 {}))
@@ -51,9 +51,8 @@
                      (map :id))
                 [1 2 3]))}
   [state]
-  (let [state (create-empty-state 3)]
-    (-> (:players state)
-        (vals))))
+  (-> (:players state)
+      (vals)))
 
 (defn get-player-count
   {:test (fn []
