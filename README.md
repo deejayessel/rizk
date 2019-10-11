@@ -61,6 +61,8 @@ Determined by the map.  Usually, regions which are large and less defensible hav
 Bonuses are applied *right before the start of a player's turn*, for all regions that a player fully controls.
 This means that a player must control a region for a full round before they can claim its bonus.
 
+Region bonuses scale throughout the course of the game.
+
 ## Interesting extensions
 - [ ] Fog of war and randomly generated maps.  Use graph cluster-detection algorithms to assign region bonuses.
 - [ ] Tile-relative resources/boosts.  Certain territories give additional bonus troops or enhance the fighting power of troops within a certain radius.
