@@ -165,6 +165,46 @@
            state
            territory-names)))
 
+(defn get-cards
+  {:test (fn []
+           (is= (-> (create-empty-state 3)
+                    (get-cards 1))
+                {:a 0
+                 :b 0
+                 :c 0}))}
+  [state player-id]
+  (get-in state [:players player-id :cards]))
+
+(defn add-card-to-player
+  {:test (fn []
+           (is= (-> (create-empty-state 3)
+                    (add-card-to-player 1 :a)
+                    (get-cards 1)
+                    (:a))
+                1))}
+  [state player-id card-type]
+  {:pre [(map? state) (keyword? card-type)]}
+  (update-in state [:players player-id :cards card-type] inc))
+
+(defn remove-card-from-player
+  {:test (fn []
+           (is= (-> (create-empty-state 3)
+                    (add-card-to-player 1 :a)
+                    (remove-card-from-player 1 :a)
+                    (get-cards 1)
+                    (vals))
+                [0 0 0])
+           (is= (-> (create-empty-state 3)
+                    (add-card-to-player 1 :a)
+                    (add-card-to-player 1 :a)
+                    (remove-card-from-player 1 :a)
+                    (get-cards 1)
+                    (vals))
+                [1 0 0]))}
+  [state player-id card-type]
+  {:pre [(map? state) (keyword? card-type)]}
+  (update-in state [:players player-id :cards card-type] dec))
+
 (defn create-game
   {:test (fn []
            (is= (create-game 2)
