@@ -1,8 +1,37 @@
 (ns rizk.random
-  (:require [rizk.util :refer [floor ceiling]]
-            [ysera.test :refer [is= is is-not error?]]
+  (:require [ysera.test :refer [is= is is-not error?]]
             [ysera.random :refer [random-nth
                                   shuffle-with-seed]]))
+
+(defn- balanced-partition
+  "Partition a collection into n pieces, where the size of any two pieces
+  differs by no greater than 1."
+  {:test (fn []
+           (let [balanced? (fn [partition-list]
+                             (as-> (map count partition-list) $
+                                   (map - $ (rest $))
+                                   (every? (fn [diff] (>= 1 diff -1)) $)))]
+             (is (balanced? (balanced-partition 3 (range 20))))
+             (is (balanced? (balanced-partition 3 (range 21))))
+             (is (balanced? (balanced-partition 3 (range 22))))
+             (is (balanced? (balanced-partition 4 (range 3))))
+             (is (balanced? (balanced-partition 3 (range 4))))))}
+  [n coll]
+  {:pre [(pos-int? n) (coll? coll)]}
+  (if (= 1 n)
+    coll
+    (let [coll-size (count coll)
+          piece-size (quot coll-size n)
+          partition-size (* n piece-size)
+          [front back] (split-at partition-size coll)
+          parted (partition piece-size front)]
+      (if (empty? back)
+        parted
+        (reduce-kv (fn [parted i rem]
+                     (update parted i (fn [piece]
+                                        (conj piece rem))))
+                   (vec parted)
+                   (vec back))))))
 
 (defn random-partition-with-seed
   "Randomly partition a collection into n pieces."
@@ -24,21 +53,9 @@
                      (map count))
                 [2 1 1]))}
   [seed n coll]
-  (let [[seed, shuffled-coll] (shuffle-with-seed seed coll)
-        coll-size (count coll)
-        piece-size (floor (/ coll-size n))
-        partition-size (* n piece-size)
-        partitioned-coll (partition piece-size
-                                    (take partition-size shuffled-coll))
-        leftovers (drop partition-size shuffled-coll)]
-    [seed
-     (if (empty? leftovers)
-       partitioned-coll
-       (reduce-kv (fn [partitioned-coll i leftover]
-                    (update partitioned-coll i (fn [partition-piece]
-                                                 (conj partition-piece leftover))))
-                  (vec partitioned-coll)
-                  (vec leftovers)))]
-    ))
-
-
+  {:pre (int? seed) (pos-int? n) (coll? coll)}
+  (if (= 1 n)
+    coll
+    (let [[seed, shuffled-coll] (shuffle-with-seed seed coll)
+          partitioned-coll (balanced-partition n shuffled-coll)]
+      [seed partitioned-coll])))
