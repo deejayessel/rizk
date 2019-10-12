@@ -26,8 +26,7 @@
                                   :initial-reinforcement-size 5
                                   :initial-card-exchange-rate 4}}))}
   [num-players]
-  {:pre [(int? num-players)
-         (>= num-players 2)]}
+  {:pre [(int? num-players) (>= num-players 2)]}
   {:player-in-turn 1
    :turn-phase     :distribution-phase
    :seed           0
@@ -51,6 +50,7 @@
                      (map :id))
                 [1 2 3]))}
   [state]
+  {:pre [(map? state)]}
   (-> (:players state)
       (vals)))
 
@@ -60,6 +60,7 @@
                     (get-player-count))
                 3))}
   [state]
+  {:pre [(map? state)]}
   (let [players (get-players state)]
     (count players)))
 
@@ -76,6 +77,15 @@
   {:pre [(pos-int? player-id) (<= 1 player-id (get-player-count state))]}
   (get-in state [:players player-id]))
 
+(defn get-rule
+  {:test (fn []
+           (is= (-> (create-empty-state 3)
+                    (get-rule :initial-army-size))
+                20))}
+  [state key]
+  {:pre [(map? state) (keyword? key)]}
+  (get-in state [:rules key]))
+
 (defn get-territories
   {:test (fn []
            (is= (-> (create-empty-state 3)
@@ -86,6 +96,7 @@
                     (get-territories))
                 []))}
   ([player]
+   {:pre [(map? player)]}
    (:territories player))
   ([state player-id]
    (get-in state [:players player-id :territories])))
@@ -96,6 +107,7 @@
                 ["New Guinea"
                  "Western Australia"]))}
   [territory-name]
+  {:pre [(string? territory-name)]}
   (let [territory-defn (get-territory-defn territory-name)]
     (:neighbors territory-defn)))
 
@@ -129,6 +141,7 @@
   ([state territory-name owner-id]
    (add-territory state territory-name owner-id 1))
   ([state territory-name owner-id troop-count]
+   {:pre [(map? state) (string? territory-name) (pos-int? troop-count)]}
    (-> state
        (update-in [:players owner-id :territories]          ; update players
                   (fn [territories]
@@ -160,10 +173,31 @@
   ([state territory-names owner-id]
    (add-territories state territory-names owner-id 1))
   ([state territory-names owner-id troop-count]
+   {:pre [(map? state) (every? string? territory-names) (pos-int? troop-count)]}
    (reduce (fn [state territory-name]
              (add-territory state territory-name owner-id troop-count))
            state
            territory-names)))
+
+(defn get-owner-id
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-territory "Indonesia" 1)
+                    (get-owner-id "Indonesia"))
+                1))}
+  [state territory-name]
+  {:pre [(map? state) (string? territory-name)]}
+  (get-in state [:ownership-map territory-name :owner-id]))
+
+(defn get-troop-count
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-territory "Indonesia" 2 10)
+                    (get-troop-count "Indonesia"))
+                10))}
+  [state territory-name]
+  {:pre [(map? state) (string? territory-name)]}
+  (get-in state [:ownership-map territory-name :troop-count]))
 
 (defn get-cards
   {:test (fn []
@@ -173,6 +207,7 @@
                  :b 0
                  :c 0}))}
   [state player-id]
+  {:pre [(map? state)]}
   (get-in state [:players player-id :cards]))
 
 (defn add-card-to-player
@@ -242,19 +277,17 @@
                      (get-players)
                      (map (fn [player]
                             (count (get-territories player)))))
-                [2 1 1])
-           )}
-  [num-players]
+                [2 1 1]))}
+  [num-players & kvs]
+  {:pre [(int? num-players) (>= num-players 2)]}
   (let [state (create-empty-state num-players)
         seed (:seed state)
-        territory-names (->> (get-all-territory-defns)
-                             (map :name))
+        territory-names (map :name (get-all-territory-defns))
         [_ territory-name-partitions] (random-partition-with-seed seed num-players territory-names)
         indexed-partitions (map-indexed (fn [i x] (list (+ i 1) x))
                                         territory-name-partitions)]
-
     (reduce (fn [state index-partition]
-              (let [[player-index territory-names] index-partition]
-                (add-territories state territory-names player-index)))
+              (let [[i name] index-partition]
+                (add-territories state name i)))
             state
             indexed-partitions)))
