@@ -15,27 +15,27 @@
   {:test (fn []
            (is= (get-all-definitions)
                 [{:name        "Indonesia"
-                  :entity-type :territory
+                  :entity-type :tile
                   :neighbors   ["New Guinea"
                                 "Western Australia"]
                   :region      "Australia"}
 
                  {:name        "New Guinea"
-                  :entity-type :territory
+                  :entity-type :tile
                   :neighbors   ["Indonesia"
                                 "Western Australia"
                                 "Eastern Australia"]
                   :region      "Australia"}
 
                  {:name        "Western Australia"
-                  :entity-type :territory
+                  :entity-type :tile
                   :neighbors   ["Indonesia"
                                 "New Guinea"
                                 "Eastern Australia"]
                   :region      "Australia"}
 
                  {:name        "Eastern Australia"
-                  :entity-type :territory
+                  :entity-type :tile
                   :neighbors   ["New Guinea"
                                 "Western Australia"]
                   :region      "Australia"}
@@ -43,7 +43,7 @@
                  {:name          "Australia"
                   :entity-type   :region
                   :bonus-initial 2
-                  :territories   ["Indonesia"
+                  :tiles   ["Indonesia"
                                   "New Guinea"
                                   "Western Australia"
                                   "Eastern Australia"]}]))}
@@ -54,7 +54,7 @@
   {:test (fn []
            (is= (get-definition "Eastern Australia")
                 {:name        "Eastern Australia"
-                 :entity-type :territory
+                 :entity-type :tile
                  :neighbors   ["New Guinea"
                                "Western Australia"]
                  :region      "Australia"})
@@ -81,7 +81,7 @@
            (is= (->> (get-entities-of-type :region)
                      (map :name))
                 ["Australia"])
-           (is= (->> (get-entities-of-type :territory)
+           (is= (->> (get-entities-of-type :tile)
                      (map :name))
                 ["Indonesia"
                  "New Guinea"
@@ -102,25 +102,25 @@
   []
   (get-entities-of-type :region))
 
-(defn get-all-territory-defns
+(defn get-all-tile-defns
   {:test (fn []
-           (is= (->> (get-all-territory-defns)
+           (is= (->> (get-all-tile-defns)
                      (map :name))
                 ["Indonesia"
                  "New Guinea"
                  "Western Australia"
                  "Eastern Australia"]))}
   []
-  (get-entities-of-type :territory))
+  (get-entities-of-type :tile))
 
-(defn get-territory-defn
+(defn get-tile-defn
   {:test (fn []
-           (is= (get-territory-defn "Eastern Australia")
+           (is= (get-tile-defn "Eastern Australia")
                 {:name        "Eastern Australia"
-                 :entity-type :territory
+                 :entity-type :tile
                  :neighbors   ["New Guinea"
                                "Western Australia"]
                  :region      "Australia"}))}
-  [territory-name]
-  {:pre [(string? territory-name)]}
-  (get-definition territory-name))
+  [tile-name]
+  {:pre [(string? tile-name)]}
+  (get-definition tile-name))
