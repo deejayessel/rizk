@@ -301,23 +301,9 @@
              indexed-partns))))
 
 (defn create-game
-  "Creates game, taking in optional arguments to set cards"
+  "Creates a starting games state by randomly assigning territories."
   {:test (fn []
-           (is= (create-game 4) (create-empty-state 4))
-           (let [state (create-game 3 [{:cards {:a 1}}
-                                       {:cards {:b 1}}
-                                       {:cards {:c 1}}])]
-             (is= (-> (get-cards state 1)
-                      (:a))
-                  1)
-             (is= (-> (get-cards state 2)
-                      (:b))
-                  1)
-             (is= (-> (get-cards state 3)
-                      (:c))
-                  1))
-           (is= (create-game 2 [{:tiles ["Indonesia" "Western Australia"]}
-                                {:tiles ["New Guinea" "Eastern Australia"]}])
+           (is= (create-game 2)
                 {:player-in-turn 1
                  :turn-phase     :card-exchange-phase
                  :seed           0
@@ -344,38 +330,7 @@
                  :rules          {:initial-army-size          20
                                   :initial-reinforcement-size 5
                                   :initial-card-exchange-rate 4}}))}
-  ([num-players]
-   (create-empty-state num-players))
-  ([num-players data & kvs]
-   {:pre [(or (nil? data) (vector? data))]}
-   (let [players-data (map-indexed (fn [index player-data]
-                                     (assoc player-data :player-id (inc index)))
-                                   data)
-         state (as-> (create-empty-state num-players) $
-                     (reduce (fn [state {player-id :player-id
-                                         tiles     :tiles
-                                         cards     :cards}]
-                               (-> (cond
-                                     (nil? tiles)
-                                     state
-
-                                     (every? string? tiles)
-                                     (add-tiles state player-id tiles)
-
-                                     (every? map? tiles)
-                                     (add-tiles state player-id (map :name tiles))
-
-                                     :else
-                                     (error "Game tile initialization failed"))
-                                   (add-cards player-id cards)))
-                             $
-                             players-data)
-                     (if (empty? kvs)
-                       $
-                       (apply assoc $ kvs)))
-         tile-names (set (map :name (get-tiles state)))
-         all-tile-names (set (map :name (get-all-tile-defns)))
-         remaining-tile-names (difference all-tile-names tile-names)]
-     (if (empty? remaining-tile-names)
-       state
-       (randomly-assign-tiles state (list* remaining-tile-names))))))
+  [num-players]
+   {:pre [(>= num-players 2)]}
+   (-> (create-empty-state num-players)
+       (randomly-assign-tiles)))
