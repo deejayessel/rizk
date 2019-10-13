@@ -213,7 +213,6 @@
   {:pre [(map? state) (keyword? card-type)]}
   (update-in state [:players player-id :cards card-type] inc))
 
-;TODO
 (defn add-cards
   {:test (fn []
            (is= (-> (create-empty-state 3)
@@ -221,15 +220,15 @@
                     (add-cards 1 {:a 2 :b 0})
                     (get-cards 1))
                 {:a 3 :b 2 :c 0}))}
-  [state player-id {da :a db :b dc :c}]
-  (let [as-int (fn [x] (if (nil? x) 0 x))
-        [da db dc] (map as-int [da db dc])
-        path (fn [k] [:players player-id :cards k])
-        inc-fn (fn [n] (fn [x] (+ x n)))]
-    (-> state
-        (update-in (path :a) (inc-fn da))
-        (update-in (path :b) (inc-fn db))
-        (update-in (path :c) (inc-fn dc)))))
+  [state player-id card-map]
+  {:pre [(map? state) (map? card-map)]}
+  (let [update-fn (fn [state card-type quantity]
+                    (if (some? quantity)
+                      (update-in state
+                                 [:players player-id :cards card-type]
+                                 (fn [x] (+ x quantity)))
+                      state))]
+    (reduce-kv update-fn state card-map)))
 
 (defn remove-card
   {:test (fn []
@@ -331,6 +330,6 @@
                                   :initial-reinforcement-size 5
                                   :initial-card-exchange-rate 4}}))}
   [num-players]
-   {:pre [(>= num-players 2)]}
-   (-> (create-empty-state num-players)
-       (randomly-assign-tiles)))
+  {:pre [(>= num-players 2)]}
+  (-> (create-empty-state num-players)
+      (randomly-assign-tiles)))
