@@ -44,9 +44,10 @@
          (> (:troop-count initial-tile) 2)
          (contains? (:neighbors initial-tile) final-loc))))
 
+; TODO
 (defn attack
   {:test (fn [])}
   [state initial-loc final-loc]
   (if (valid-attack? state initial-loc final-loc)
-    accessor
+    
     (error))
