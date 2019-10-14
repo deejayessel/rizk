@@ -13,40 +13,43 @@
 (defn- get-all-definitions
   "Returns all definitions in the game."
   {:test (fn []
-           (is= (get-all-definitions)
-                [{:name        "Indonesia"
-                  :entity-type :tile
-                  :neighbors   ["New Guinea"
-                                "Western Australia"]
-                  :region      "Australia"}
+           (is= (->> (get-all-definitions)
+                     (filter (fn [x] (or (= (:region x) "Australia")
+                                         (= (:name x) "Australia"))))
+                     (set))
+                (set [{:name        "Indonesia"
+                       :entity-type :tile
+                       :neighbors   ["New Guinea"
+                                     "Western Australia"]
+                       :region      "Australia"}
 
-                 {:name        "New Guinea"
-                  :entity-type :tile
-                  :neighbors   ["Indonesia"
-                                "Western Australia"
-                                "Eastern Australia"]
-                  :region      "Australia"}
+                      {:name        "New Guinea"
+                       :entity-type :tile
+                       :neighbors   ["Indonesia"
+                                     "Western Australia"
+                                     "Eastern Australia"]
+                       :region      "Australia"}
 
-                 {:name        "Western Australia"
-                  :entity-type :tile
-                  :neighbors   ["Indonesia"
-                                "New Guinea"
-                                "Eastern Australia"]
-                  :region      "Australia"}
+                      {:name        "Western Australia"
+                       :entity-type :tile
+                       :neighbors   ["Indonesia"
+                                     "New Guinea"
+                                     "Eastern Australia"]
+                       :region      "Australia"}
 
-                 {:name        "Eastern Australia"
-                  :entity-type :tile
-                  :neighbors   ["New Guinea"
-                                "Western Australia"]
-                  :region      "Australia"}
+                      {:name        "Eastern Australia"
+                       :entity-type :tile
+                       :neighbors   ["New Guinea"
+                                     "Western Australia"]
+                       :region      "Australia"}
 
-                 {:name          "Australia"
-                  :entity-type   :region
-                  :bonus-initial 2
-                  :tiles   ["Indonesia"
-                                  "New Guinea"
-                                  "Western Australia"
-                                  "Eastern Australia"]}]))}
+                      {:name          "Australia"
+                       :entity-type   :region
+                       :bonus-initial 2
+                       :tiles   ["Indonesia"
+                                 "New Guinea"
+                                 "Western Australia"
+                                 "Eastern Australia"]}])))}
   []
   (vals (deref definitions-atom)))
 
@@ -82,11 +85,12 @@
                      (map :name))
                 ["Australia"])
            (is= (->> (get-entities-of-type :tile)
-                     (map :name))
-                ["Indonesia"
-                 "New Guinea"
-                 "Western Australia"
-                 "Eastern Australia"]))}
+                     (map :name)
+                     (set))
+                (set ["Indonesia"
+                      "New Guinea"
+                      "Western Australia"
+                      "Eastern Australia"])))}
   [entity-type]
   {:pre [(keyword? entity-type)]}
   (->> (get-all-definitions)
@@ -105,11 +109,12 @@
 (defn get-all-tile-defns
   {:test (fn []
            (is= (->> (get-all-tile-defns)
-                     (map :name))
-                ["Indonesia"
-                 "New Guinea"
-                 "Western Australia"
-                 "Eastern Australia"]))}
+                     (map :name)
+                     (set))
+                (set ["Indonesia"
+                      "New Guinea"
+                      "Western Australia"
+                      "Eastern Australia"])))}
   []
   (get-entities-of-type :tile))
 

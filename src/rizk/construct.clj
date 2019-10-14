@@ -269,7 +269,8 @@
            (is (->> (create-empty-state 2)
                     (randomly-assign-tiles)
                     (get-tiles)
-                    (every? (fn [t] (contains? t :owner-id)))))
+                    (every? (fn [t] (contains? t :owner-id)))
+                    ))
            ; All tiles have 1 troop count
            (is (->> (create-empty-state 3)
                     (randomly-assign-tiles)
@@ -307,17 +308,17 @@
                  :turn-phase     :card-exchange-phase
                  :seed           0
                  :players        {1 {:id    1
-                                     :tiles [{:name        "Indonesia"
+                                     :tiles [{:name        "Western Australia"
                                               :owner-id    1
                                               :troop-count 1}
-                                             {:name        "Western Australia"
+                                             {:name        "New Guinea"
                                               :owner-id    1
                                               :troop-count 1}]
                                      :cards {:a 0
                                              :b 0
                                              :c 0}}
                                   2 {:id    2
-                                     :tiles [{:name        "New Guinea"
+                                     :tiles [{:name        "Indonesia"
                                               :owner-id    2
                                               :troop-count 1}
                                              {:name        "Eastern Australia"
