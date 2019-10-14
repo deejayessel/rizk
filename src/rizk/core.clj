@@ -1,6 +1,7 @@
 (ns rizk.core
   (:require [ysera.test :refer [is= is is-not error?]]
             [rizk.definitions :refer [get-all-tile-defns
+                                      get-tile
                                       get-tile-defn]]
             [rizk.construct :refer [get-tiles]]))
 
@@ -20,3 +21,32 @@
         (= c 3)
         (and (= a 1) (= b 1) (= c 1)))
     nil))
+
+(defn reinforce
+  ; TODO should there be a check such that this function can only be called once?
+  ; TODO region bonuses
+  "Reinforces a player's troop number."
+  {:test (fn [])}
+  [state])
+
+(defn valid-attack?
+  "Checks if a move is a valid attack. This involves 1. Initial location is owned by player, 2. 
+  Final territory is owned by another player, 3. Initial location has 2 or more troops, 4. 
+  Initial location and final location are neighbors."
+  {:test (fn [])}
+  [state initial-loc final-loc]
+  (let [player-id (:player-in-turn state)
+        initial-tile (get-tile state initial-loc)]
+    (and (= (:owner-id initial-tile)
+            player-id)
+         (not= (:owner-id initial-tile)
+               (player-id))
+         (> (:troop-count initial-tile) 2)
+         (contains? (:neighbors initial-tile) final-loc))))
+
+(defn attack
+  {:test (fn [])}
+  [state initial-loc final-loc]
+  (if (valid-attack? state initial-loc final-loc)
+    accessor
+    (error))
