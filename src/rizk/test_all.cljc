@@ -1,9 +1,10 @@
 (ns rizk.test_all
   (:require [clojure.test :refer [run-tests successful?]]
-            [ysera.test :refer [deftest is]]))
+            [ysera.test :refer [deftest is]]
+            [rizk.definitions_loader]))
 
 (deftest tests-all
-  "Bootstrapping with the required namespaces, finds all the firestone.* namespaces (except this one),
+  "Bootstrapping with the required namespaces, finds all the rizk.* namespaces (except this one),
                 requires them, and runs all their tests."
   (let [namespaces (->> (all-ns)
                         (map str)

@@ -10,8 +10,8 @@
   {:test (fn []
            (let [balanced? (fn [partition-list]
                              (as-> (map count partition-list) $
-                               (map - $ (rest $))
-                               (every? (fn [diff] (>= 1 diff -1)) $)))]
+                                   (map - $ (rest $))
+                                   (every? (fn [diff] (>= 1 diff -1)) $)))]
              (is (balanced? (balanced-partition 3 (range 20))))
              (is (balanced? (balanced-partition 3 (range 21))))
              (is (balanced? (balanced-partition 3 (range 22))))
@@ -61,16 +61,14 @@
           partitioned-coll (balanced-partition n shuffled-coll)]
       [seed partitioned-coll])))
 
-(defn roll-n-dices
-  "Rows n dices with seed."
+(defn roll-n-dice
+  "Rolls n dice and gives new seed."
   {:test (fn []
-           (is= (roll-n-dices 38 3)
+           (is= (roll-n-dice 38 3)
                 [[2 1 4] 654490949189288373]))}
   [seed n]
-  (reduce
-   (fn [[results seed] _]
-     (let [[new-seed random-num] (get-random-int seed 6)]
-       (-> [(conj results random-num)]
-           (conj new-seed))))
-   [[] seed]
-   (range 0 n)))
+  (reduce (fn [[rolls seed] _]
+            (let [[new-seed roll] (get-random-int seed 6)]
+              [(conj rolls roll) new-seed]))
+          [[] seed]
+          (range 0 n)))

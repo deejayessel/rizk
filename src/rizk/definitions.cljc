@@ -43,13 +43,13 @@
                                      "Western Australia"]
                        :region      "Australia"}
 
-                      {:name          "Australia"
-                       :entity-type   :region
-                       :bonus-initial 2
-                       :tiles   ["Indonesia"
-                                 "New Guinea"
-                                 "Western Australia"
-                                 "Eastern Australia"]}])))}
+                      {:name         "Australia"
+                       :entity-type  :region
+                       :region-bonus 2
+                       :tiles        ["Indonesia"
+                                      "New Guinea"
+                                      "Western Australia"
+                                      "Eastern Australia"]}])))}
   []
   (vals (deref definitions-atom)))
 

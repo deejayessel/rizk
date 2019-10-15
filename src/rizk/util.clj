@@ -30,3 +30,11 @@
           den (denominator n)]
       (+ (quot num den) 1))
     n))
+
+(defn non-neg-int?
+  {:test (fn []
+           (is (non-neg-int? 0))
+           (is (non-neg-int? 1))
+           (is-not (non-neg-int? -1)))}
+  [n]
+  (or (pos-int? n) (zero? n)))
