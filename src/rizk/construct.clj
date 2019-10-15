@@ -43,6 +43,14 @@
                     :initial-reinforcement-size 5
                     :initial-card-exchange-rate 4}})
 
+(defn get-player-id-in-turn
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (:player-in-turn))
+                1))}
+  [state]
+  (:player-in-turn state))
+
 (defn get-players
   {:test (fn []
            (is= (->> (create-empty-state 3)
@@ -86,15 +94,29 @@
   {:pre [(map? state) (keyword? key)]}
   (get-in state [:rules key]))
 
-(defn get-neighbors
+(defn get-neighbor-names
   {:test (fn []
-           (is= (get-neighbors "Indonesia")
+           (is= (get-neighbor-names "Indonesia")
                 ["New Guinea"
                  "Western Australia"]))}
   [tile-name]
   {:pre [(string? tile-name)]}
   (let [tile-defn (get-tile-defn tile-name)]
     (:neighbors tile-defn)))
+
+(defn neighbors?
+  {:test (fn []
+           (is (neighbors? "Indonesia"
+                           "New Guinea"))
+           (is-not (neighbors? "Indonesia"
+                               "Eastern Australia")))}
+  [tile-name-1 tile-name-2]
+  {:pre [(string? tile-name-1) (string? tile-name-2)]}
+  (->> (get-neighbor-names tile-name-1)
+       (filter (fn [neighbor-name] (= neighbor-name
+                                      tile-name-2)))
+       (first)
+       (some?)))
 
 (defn get-region
   {:test (fn []
@@ -289,7 +311,8 @@
    {:pre [(map? state) (every? string? tile-names)]}
    (let [seed (:seed state)
          player-count (get-player-count state)
-         [_ tile-name-partns] (random-partition-with-seed seed player-count tile-names)
+         [seed tile-name-partns] (random-partition-with-seed seed player-count tile-names)
+         state (assoc state :seed seed)
          indexed-partns (map-indexed (fn [index part]
                                        {:player-id (inc index)
                                         :partition part})
@@ -306,19 +329,19 @@
            (is= (create-game 2)
                 {:player-in-turn 1
                  :turn-phase     :card-exchange-phase
-                 :seed           0
+                 :seed           -9203025489357073502
                  :players        {1 {:id    1
-                                     :tiles [{:name        "Western Australia"
+                                     :tiles [{:name        "Indonesia"
                                               :owner-id    1
                                               :troop-count 1}
-                                             {:name        "New Guinea"
+                                             {:name        "Western Australia"
                                               :owner-id    1
                                               :troop-count 1}]
                                      :cards {:a 0
                                              :b 0
                                              :c 0}}
                                   2 {:id    2
-                                     :tiles [{:name        "Indonesia"
+                                     :tiles [{:name        "New Guinea"
                                               :owner-id    2
                                               :troop-count 1}
                                              {:name        "Eastern Australia"
@@ -335,3 +358,69 @@
   (-> (create-empty-state num-players)
       (randomly-assign-tiles)))
 
+(defn create-test-game
+  "Always returns the same state, for testing."
+  []
+  {:player-in-turn 1
+   :turn-phase     :card-exchange-phase
+   :seed           -9203025489357073502
+   :players        {1 {:id    1
+                       :tiles [{:name        "Indonesia"
+                                :owner-id    1
+                                :troop-count 2}
+                               {:name        "Western Australia"
+                                :owner-id    1
+                                :troop-count 1}]
+                       :cards {:a 0
+                               :b 0
+                               :c 0}}
+                    2 {:id    2
+                       :tiles [{:name        "New Guinea"
+                                :owner-id    2
+                                :troop-count 1}
+                               {:name        "Eastern Australia"
+                                :owner-id    2
+                                :troop-count 1}]
+                       :cards {:a 0
+                               :b 0
+                               :c 0}}}
+   :rules          {:initial-army-size          20
+                    :initial-reinforcement-size 5
+                    :initial-card-exchange-rate 4}})
+
+(defn get-tiles-from-names
+  {:test (fn []
+           (is= (-> (create-game 2)
+                    (get-tiles-from-names ["Indonesia"
+                                           "Western Australia"]))
+                [{:name        "Indonesia"
+                  :owner-id    1
+                  :troop-count 1}
+                 {:name        "Western Australia"
+                  :owner-id    1
+                  :troop-count 1}]))}
+  [state names]
+  {:pre [(map? state) (vector? names) (every? string? names)]}
+  (map (fn [tile-name]
+         (get-tile state tile-name))
+       names))
+
+; TODO
+(defn get-region-bonus
+  [region-name]
+  (error "Not implemented"))
+
+; TODO
+(defn owns-region?
+  [state player-id region-name]
+  (error "Not implemented"))
+
+; TODO
+(defn get-owned-regions
+  [state player-id]
+  (error "Not implemented"))
+
+; TODO
+(defn get-player-region-bonuses
+  [state player-id]
+  (error "Not implemented"))
