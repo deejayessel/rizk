@@ -242,15 +242,15 @@
                     (add-cards 1 {:a 2 :b 0})
                     (get-cards 1))
                 {:a 3 :b 2 :c 0}))}
-  [state player-id card-map]
-  {:pre [(map? state) (map? card-map)]}
+  [state player-id cards]
+  {:pre [(map? state) (map? cards)]}
   (let [update-fn (fn [state card-type quantity]
-                    (if (some? quantity)
+                    (if (contains? cards card-type)
                       (update-in state
                                  [:players player-id :cards card-type]
                                  (fn [x] (+ x quantity)))
                       state))]
-    (reduce-kv update-fn state card-map)))
+    (reduce-kv update-fn state cards)))
 
 (defn remove-card
   {:test (fn []
