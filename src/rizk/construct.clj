@@ -2,7 +2,9 @@
   (:require [ysera.test :refer [is= is is-not error?]]
             [ysera.error :refer [error]]
             [rizk.definitions :refer [get-all-tile-defns
-                                      get-tile-defn]]
+                                      get-tile-defn
+                                      get-region-defn
+                                      get-region-defns]]
             [rizk.random :refer [random-partition-with-seed]]
             [clojure.set :refer [difference]]))
 
@@ -61,6 +63,17 @@
   {:pre [(map? state)]}
   (-> (:players state)
       (vals)))
+
+(defn get-opponents-ids
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (get-opponents-ids 1))
+                [2]))}
+  [state player-id]
+  {:pre [(map? state) ]}
+  (->> (get-players state)
+       (remove (fn [player] (= (:id player) player-id)))
+       (map :id)))
 
 (defn get-player-count
   {:test (fn []
@@ -405,22 +418,57 @@
          (get-tile state tile-name))
        names))
 
-; TODO
 (defn get-region-bonus
+  "Returns the region bonus of a specified region."
+  {:test (fn []
+           (is= (get-region-bonus "Australia")
+                2))}
   [region-name]
-  (error "Not implemented"))
+  (:region-bonus (get-region-defn region-name)))
 
-; TODO
+; TODO make test not definition/map dependent.
 (defn owns-region?
+  "Checks if a player owns a region."
+    {:test (fn []
+             (not (-> (create-game 2)
+                      (owns-region? 1 "Australia")))
+             (is (-> (create-empty-state 2)
+                      (add-tiles 1 ["Indonesia" "Western Australia" "New Guinea" "Eastern Australia"])
+                      (owns-region? 1 "Australia"))))}
   [state player-id region-name]
-  (error "Not implemented"))
+  (->> (get-region-defn region-name)
+       (:tiles)
+       (get-tiles-from-names state)
+       (map (fn [tile] (:owner-id tile)))
+       (filter (fn [owner-id] (not= owner-id player-id)))
+       (count)
+       (= 0)))
 
-; TODO
 (defn get-owned-regions
+  "Returns the regions owned by the player."
+  {:test (fn []
+           (is= (-> (create-game 2)
+                    (get-owned-regions 1))
+                ())
+           (is= (-> (create-empty-state 2)
+                    (add-tiles 1 ["Indonesia" "Western Australia" "New Guinea" "Eastern Australia"])
+                    (get-owned-regions 1))
+                ["Australia"]))}
   [state player-id]
-  (error "Not implemented"))
+  (let [region-names (map :name (get-region-defns))]
+    (filter (fn [region-name] (owns-region? state player-id region-name)) region-names)))
 
-; TODO
 (defn get-player-region-bonuses
+  "Returns the total region bonuses the player has."
+    {:test (fn []
+             (is= (-> (create-game 2)
+                      (get-player-region-bonuses 1))
+                  0)
+             (is= (-> (create-empty-state 2)
+                      (add-tiles 1 ["Indonesia" "Western Australia" "New Guinea" "Eastern Australia"])
+                      (get-player-region-bonuses 1))
+                  2))}
   [state player-id]
-  (error "Not implemented"))
+  (->> (get-owned-regions state player-id)
+       (map (fn [region-name] (get-region-bonus region-name)))
+       (reduce (fn [region-bonus curr] (+ curr region-bonus)) 0)))

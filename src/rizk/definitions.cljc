@@ -129,3 +129,20 @@
   [tile-name]
   {:pre [(string? tile-name)]}
   (get-definition tile-name))
+
+(defn get-region-defn
+  "Returns the definition of a specified region. Throws an error if region is not found."
+  {:test (fn []
+           (is= (get-region-defn "Australia")
+                {:name "Australia"
+                 :entity-type :region
+                 :region-bonus 2
+                 :tiles
+                 ["Indonesia" "New Guinea" "Western Australia" "Eastern Australia"]})
+           (error? (get-region-defn "Western Australia")))}
+  [region-name]
+  {:pre [(string? region-name)]}
+  (let [region-def (get-definition region-name)]
+    (if (or (empty? region-def) (not= (:entity-type region-def) :region))
+      (error (str "Unable to find region: " region-name "."))
+      region-def)))

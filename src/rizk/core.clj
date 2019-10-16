@@ -4,13 +4,16 @@
             [rizk.util :refer [non-neg-int?]]
             [rizk.definitions :refer [get-all-tile-defns
                                       get-tile-defn]]
-            [rizk.construct :refer [create-game
+            [rizk.construct :refer [add-tiles
+                                    create-empty-state
+                                    create-game
                                     create-test-game
                                     get-player-id-in-turn
                                     get-tiles
                                     get-tile
                                     get-troop-count
                                     get-owner-id
+                                    get-player-region-bonuses
                                     neighbors?]]))
 
 (defn valid-hand?
@@ -29,24 +32,27 @@
            (= c 3)
            (and (= a 1) (= b 1) (= c 1)))))
 
-; TODO : get-region-bonuses
-(comment
-  (defn reinforcement-count
-    "Determines the number of reinforcements a given player receives on their turn.
+
+(defn reinforcement-count
+  "Determines the number of reinforcements a given player receives on their turn.
     Each player receives a minimum of 3 troops.  Otherwise, their reinforcement count
     is determined by the number of territories they have divided by 3, in addition
     to any region bonuses."
-    {:test (fn []
-             (is= (-> (create-test-game)
-                      (reinforcement-count 1))
-                  3))}
-    [state player-id]
-    (let [tile-count (-> (get-tiles state player-id)
-                         (count))
-          region-bonus (get-region-bonuses state player-id)]
-      (max 3                                                ; minimum allotment of 3 troops
-           (+ (quot tile-count 3)
-              region-bonus)))))
+  {:test (fn []
+           (is= (-> (create-test-game)
+                    (reinforcement-count 1))
+                3)
+           (is= (-> (create-empty-state 2)
+                    (add-tiles 1 ["Indonesia" "Western Australia" "New Guinea" "Eastern Australia"])
+                    (reinforcement-count 1))
+                3))}
+  [state player-id]
+  (let [tile-count (-> (get-tiles state player-id)
+                       (count))
+        region-bonus (get-player-region-bonuses state player-id)]
+    (max 3                                                ; minimum allotment of 3 troops
+         (+ (quot tile-count 3)
+            region-bonus))))
 
 (defn valid-attack?
   "Checks if a move is a valid attack. This involves 1. Initial location is owned by player, 2.
