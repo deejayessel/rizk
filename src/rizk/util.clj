@@ -2,6 +2,7 @@
   (:require [ysera.test :refer [is is-not is= error?]]))
 
 (defn floor
+  "Returns the floor of n."
   {:test (fn []
            (is= (floor (/ 22 7))
                 3)
@@ -17,6 +18,7 @@
     n))
 
 (defn ceiling
+  "Returns the ceiling of n."
   {:test (fn []
            (is= (ceiling (/ 22 7))
                 4)
@@ -32,6 +34,7 @@
     n))
 
 (defn non-neg-int?
+  "Checks whether a value is a non-negative integer."
   {:test (fn []
            (is (non-neg-int? 0))
            (is (non-neg-int? 1))
@@ -40,6 +43,8 @@
   (or (pos-int? n) (zero? n)))
 
 (defn int-or-else
+  "Return the value of the input n if n is an integer.
+  Otherwise, return default."
   {:test (fn []
            (is= (int-or-else 0 nil)
                 0)

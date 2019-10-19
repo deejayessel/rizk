@@ -184,6 +184,9 @@
                        player-id)))))))
 
 (defn add-tile
+  "Adds a tile to the state.
+
+  If no troop-count given, defaults to 1."
   {:test (fn []
            (is= (as-> (create-empty-state 3) $
                       (add-tile $ 1 "Indonesia" 1)
@@ -201,6 +204,7 @@
               :troop-count troop-count})))
 
 (defn get-tile
+  "Returns the tile in the state identified by tile-name."
   {:test (fn []
            (is= (-> (create-empty-state 2)
                     (add-tile 1 "Indonesia" 1)
@@ -213,6 +217,8 @@
   (get-in state [:tiles tile-name]))
 
 (defn add-tiles
+  "Adds a collection of tiles to the state, given their names.
+  Gives each tile a troop count of 1 by default."
   {:test (fn []
            (let [state (-> (create-empty-state 3)
                            (add-tiles 1 ["Indonesia" "New Guinea"] 1))
@@ -231,6 +237,7 @@
            tile-names)))
 
 (defn remove-tile
+  "Removes a tile from the state."
   {:test (fn []
            (is= (-> (create-empty-state 2)
                     (add-tile 1 "Indonesia")
@@ -253,6 +260,7 @@
                           (dissoc tiles tile-name)))))
 
 (defn replace-tile
+  "Adds new-tile into the state, removing any other tile that shares the same name."
   {:test (fn []
            (let [new-tile (create-tile "Indonesia"
                                        :troop-count 5
@@ -269,6 +277,7 @@
             new-tile))
 
 (defn replace-tiles
+  "Replaces multiple tiles."
   {:test (fn []
            (let [new-tiles [(create-tile "New Guinea"
                                          :troop-count 7
@@ -291,6 +300,8 @@
           new-tiles))
 
 (defn update-tile
+  "Updates a tile, given a key and either a function to apply to the current
+  value, or a value to override to the current value with."
   {:test (fn []
            ; update owner
            (is= (-> (create-empty-state 2)
@@ -322,6 +333,7 @@
                           (assoc tile key fn-or-val)))))
 
 (defn add-card
+  "Adds a card to the specified player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
                     (add-card 1 :a)
@@ -333,6 +345,8 @@
   (update-in state [:players player-id :cards card-type] inc))
 
 (defn- update-cards
+  "Adds or removes cards from the specified player's hand.
+  Guarantees that no player ends up with a negative number of cards."
   {:test (fn []
            (is= (-> (create-empty-state 3)
                     (update-cards 1 {:a 1 :b 2})
@@ -355,6 +369,7 @@
     (reduce-kv update-fn state cards)))
 
 (defn add-cards
+  "Adds cards to a player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
                     (add-cards 1 {:a 1 :b 2})
@@ -366,6 +381,7 @@
   (update-cards state player-id cards))
 
 (defn remove-card
+  "Removes a card from the player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
                     (add-card 1 :a)
@@ -385,6 +401,7 @@
   (update-in state [:players player-id :cards card-type] dec))
 
 (defn remove-cards
+  "Removes multiple cards from the player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
                     (add-cards 1 {:a 1 :b 2})
@@ -516,6 +533,7 @@
 ;; TODO make test not definition/map dependent.
 
 (defn get-tiles-from-names
+  "Given a tile name, returns the corresponding tile from the state."
   {:test (fn []
            (is= (-> (create-game 2 [{:tiles ["Indonesia"
                                              "Western Australia"]}])
