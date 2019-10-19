@@ -38,3 +38,17 @@
            (is-not (non-neg-int? -1)))}
   [n]
   (or (pos-int? n) (zero? n)))
+
+(defn int-or-else
+  {:test (fn []
+           (is= (int-or-else 0 nil)
+                0)
+           (is= (int-or-else 1 nil)
+                1)
+           (is= (int-or-else 7 0)
+                7))}
+  [n default]
+  {:pre [(or (nil? n) (int? n))]}
+  (if (nil? n)
+    default
+    n))
