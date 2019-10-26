@@ -9,35 +9,11 @@
                                     create-game
                                     create-tile
                                     get-owned-regions
-                                    get-turn-phase
                                     get-player-id-in-turn
                                     get-neighbor-names
                                     get-tile
                                     get-tiles
                                     neighbors?]]))
-
-(defn get-player-region-bonuses
-  "Returns the total region bonuses the player has."
-  {:test (fn []
-           (is= (-> (create-game 2 [{:tiles ["Indonesia"
-                                             "Western Australia"]}
-                                    {:tiles ["New Guinea"
-                                             "Eastern Australia"]}])
-                    (get-player-region-bonuses "p1"))
-                0)
-           (is= (-> (create-game 2 [{:tiles ["Indonesia"
-                                             "Western Australia"
-                                             "New Guinea"
-                                             "Eastern Australia"]}])
-                    (get-player-region-bonuses "p1"))
-                2))}
-  [state player-id]
-  {:pre [(map? state) (string? player-id)]}
-  (->> (get-owned-regions state player-id)
-       (map (fn [region-name]
-              (let [region-defn (get-region-defn region-name)]
-                (:region-bonus region-defn))))
-       (apply +)))
 
 (defn can-draw-card?
   "Determines whether a player can draw a card."
@@ -55,7 +31,7 @@
   {:pre [(map? state) (string? player-id)]}
   (and (= (get-player-id-in-turn state)
           player-id)
-       (= (get-turn-phase state)
+       (= (:turn-phase state)
           :card-exchange-phase)))
 
 (defn valid-hand?
@@ -74,11 +50,34 @@
            (= c 3)
            (and (= a 1) (= b 1) (= c 1)))))
 
+(defn get-player-region-bonuses
+  "Returns the total region bonuses the player has."
+  {:test (fn []
+           (is= (-> (create-game 2 [{:tiles ["Indonesia"
+                                             "Western Australia"]}
+                                    {:tiles ["New Guinea"
+                                             "Eastern Australia"]}])
+                    (get-player-region-bonuses "p1"))
+                0)
+           (is= (-> (create-game 2 [{:tiles ["New Guinea"
+                                             "Indonesia"
+                                             "Western Australia"
+                                             "Eastern Australia"]}])
+                    (get-player-region-bonuses "p1"))
+                2))}
+  [state player-id]
+  {:pre [(map? state) (string? player-id)]}
+  (->> (get-owned-regions state player-id)
+       (map (fn [region-name]
+              (let [region-defn (get-region-defn region-name)]
+                (:region-bonus region-defn))))
+       (apply +)))
+
 (defn reinforcement-count
   "Determines the number of reinforcements a given player receives on their turn.
     Each player receives a minimum of 3 troops.  Otherwise, their reinforcement count
-    is determined by the number of territories they have divided by 3, in addition
-    to any region bonuses."
+    is determined by the number of territories they have divided by 3. In addition to this,
+    they gain extra troops granted by any region bonuses."
   {:test (fn []
            (is= (-> (create-game 2 [{:tiles ["New Guinea"
                                              "Indonesia"]}
@@ -91,20 +90,24 @@
                                              "Western Australia"
                                              "Eastern Australia"]}])
                     (reinforcement-count "p1"))
-                3))}
+                5))}
   [state player-id]
   {:pre [(map? state) (string? player-id)]}
   (let [tile-count (-> (get-tiles state player-id)
                        (count))
         region-bonus (get-player-region-bonuses state player-id)]
-    (max 3                                                  ; minimum allotment of 3 troops
-         (+ (quot tile-count 3)
-            region-bonus))))
+    (+ (max 3 (quot tile-count 3))
+       region-bonus)))
 
 (defn valid-attack?
-  "Checks if a move is a valid attack. This involves 1. Initial location is owned by player, 2.
-  Final territory is owned by another player, 3. Initial location has 2 or more troops, 4.
-  Initial location and final location are neighbors."
+  "Checks if a move is a valid attack.
+
+  1. Src tile is owned by player,
+  2. Dest tile is owned by another player,
+  3. Src tile has 2 or more troops,
+  4. Src and Dest are neighbors,
+  5. Player in turn is in attack phase
+  6. Attacker is in turn."
   {:test (fn []
            (let [state (create-game 2 [{:tiles ["Indonesia" "Western Australia"]}
                                        {:tiles ["New Guinea" "Eastern Australia"]}]

@@ -46,25 +46,16 @@
    :initial-reinforcement-size 5
    :initial-card-exchange-rate 4})
 
-(defn get-turn-phase
-  "Returns the turn-phase of the player in turn."
-  {:test (fn []
-           (is= (-> (create-empty-state 2)
-                    (get-turn-phase))
-                :card-exchange-phase))}
-  [state]
-  (:turn-phase state))
-
 (defn update-turn-phase
   "Updates the turn phase."
   {:test (fn []
            (is= (-> (create-empty-state 2)
                     (update-turn-phase :attack-phase)
-                    (get-turn-phase))
+                    (:turn-phase))
                 :attack-phase)
            (is= (-> (create-empty-state 2)
                     (update-turn-phase (fn [_] :attack-phase))
-                    (get-turn-phase))
+                    (:turn-phase))
                 :attack-phase))}
   [state fn-or-val]
   {:pre [(map? state) (or (fn? fn-or-val) (keyword? fn-or-val))]}

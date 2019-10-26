@@ -7,7 +7,6 @@
                                     create-tile
                                     get-cards
                                     get-owned-regions
-                                    get-turn-phase
                                     get-player-id-in-turn
                                     get-neighbor-names
                                     get-tile
@@ -40,12 +39,12 @@
   {:test (fn []
            (is= (-> (create-game 2)
                     (advance-to-next-phase)
-                    (get-turn-phase))
+                    (:turn-phase))
                 :attack-phase)
            (is= (-> (create-game 2)
                     (advance-to-next-phase)
                     (advance-to-next-phase)
-                    (get-turn-phase))
+                    (:turn-phase))
                 :coordination-phase))}
   [state]
   {:pre [(map? state)]}

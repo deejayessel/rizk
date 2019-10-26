@@ -23,7 +23,7 @@ The number of troops received is determined by
 
 ```
 reinforcements = max { 3, ; minimum allotment
-                       (num_territories / 3) + region_bonuses }
+                       (num_territories / 3) } + region_bonuses
 ```
 A player must place all of these troops into territories that they own before they may move on to the attack phase. 
 
@@ -77,10 +77,10 @@ Region bonuses scale throughout the course of the game.
 
 # Sprint 1 Outline
 - [x] Clear up which functions receive tiles and which receive names (David)
-- [ ] get-rand-card / card-drawing functionality
+- [x] get-rand-card / card-drawing functionality
 - [ ] attack-once
 - [ ] attack-until-exhausted
-- [ ] card trade-in mechnaisms
+- [ ] card trade-in mechanisms
 - [ ] phase- and player-turn- transitions
 - [ ] implement coordination phase: player allowed to move one group of as many troops as they like from one territory to another (bounded by the number of troops in the territory)
 - [ ] (Optional) better testing map (shorter names, simpler layout, easy to understand)
