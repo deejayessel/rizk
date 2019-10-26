@@ -74,3 +74,13 @@ Region bonuses scale throughout the course of the game.
 ## Notes
 - Changing the behavior of fns such as `attack-success-chance` can change gameplay to encourage more aggressive or defensive play.  Another interesting fn is `valid-troop-move?`: allowing players to move their troops more freely during the coordination phase can reward dynamic play.
 - Basic strategy: [http://web.mit.edu/sp.268/www/2010/risk.pdf](http://web.mit.edu/sp.268/www/2010/risk.pdf)
+
+# Sprint 1 Outline
+- [ ] Clear up which functions receive tiles and which receive names (David)
+- [ ] get-rand-card / card-drawing functionality
+- [ ] attack-once
+- [ ] attack-until-exhausted
+- [ ] card trade-in mechnaisms
+- [ ] phase- and player-turn- transitions
+- [ ] implement coordination phase: player allowed to move one group of as many troops as they like from one territory to another (bounded by the number of troops in the territory)
+- [ ] (Optional) better testing map (shorter names, simpler layout, easy to understand)
