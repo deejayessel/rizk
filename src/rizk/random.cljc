@@ -62,15 +62,15 @@
       [seed partitioned-coll])))
 
 (defn roll-n-dice
-  "Rolls n dice and gives new seed."
+  "Rolls n 6-sided dice and gives new seed."
   {:test (fn []
            (is= (roll-n-dice 38 3)
-                [[2 1 4] 654490949189288373]))}
+                [654490949189288373 [2 1 4]]))}
   [seed n]
-  (reduce (fn [[rolls seed] _]
+  (reduce (fn [[seed rolls] _]
             (let [[new-seed roll] (get-random-int seed 6)]
-              [(conj rolls roll) new-seed]))
-          [[] seed]
+              [new-seed (conj rolls roll)]))
+          [seed []]
           (range 0 n)))
 
 (defn get-random-card
