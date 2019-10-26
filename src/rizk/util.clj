@@ -57,3 +57,19 @@
   (if (nil? n)
     default
     n))
+
+(defn inc-by
+  "Increment by n."
+  {:test (fn []
+           (is= ((inc-by 1) 2) 3)
+           (is= ((inc-by 0) 1) 1))}
+  [n]
+  (fn [x] (+ x n)))
+
+(defn dec-by
+  "Decrement by n."
+  {:test (fn []
+           (is= ((dec-by 1) 2) 1)
+           (is= ((dec-by 0) 1) 1))}
+  [n]
+  (fn [x] (- x n)))

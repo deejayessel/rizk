@@ -78,7 +78,7 @@ Region bonuses scale throughout the course of the game.
 # Sprint 1 Outline
 - [x] Clear up which functions receive tiles and which receive names (David)
 - [x] get-rand-card / card-drawing functionality
-- [ ] attack-once
+- [x] attack-once
 - [ ] attack-until-exhausted
 - [ ] card trade-in mechanisms
 - [ ] phase- and player-turn- transitions

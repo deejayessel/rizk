@@ -63,16 +63,6 @@
     (update state :turn-phase fn-or-val)
     (assoc state :turn-phase fn-or-val)))
 
-(defn update-seed
-  "Updates the state's seed."
-  {:test (fn []
-           (is= (-> (create-empty-state 2)
-                    (update-seed 100)
-                    (:seed))
-                100))}
-  [state seed]
-  (assoc state :seed seed))
-
 (defn get-player-id-in-turn
   "Returns the id of the player in turn."
   {:test (fn []
@@ -319,9 +309,9 @@
                     (:troop-count))
                 2))}
   [state tile-name key fn-or-val]
-  {:pre [(map? state) (string? tile-name) (or (fn? fn-or-val)
-                                              (pos-int? fn-or-val)
-                                              (string? fn-or-val))]}
+  {:pre [(map? state) (string? tile-name) (keyword? key) (or (fn? fn-or-val)
+                                                             (pos-int? fn-or-val)
+                                                             (string? fn-or-val))]}
   (let [tile (get-tile state tile-name)]
     (replace-tile state (if (fn? fn-or-val)
                           (update tile key fn-or-val)
