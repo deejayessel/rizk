@@ -85,7 +85,8 @@
   Initial location and final location are neighbors."
   {:test (fn []
            (let [state (create-game 2 [{:tiles ["Indonesia" "Western Australia"]}
-                                       {:tiles ["New Guinea" "Eastern Australia"]}])]
+                                       {:tiles ["New Guinea" "Eastern Australia"]}]
+                                    :turn-phase :attack-phase)]
 
              ; Must attack from friendly territory
              (is-not (valid-attack? state 1 "New Guinea" "Eastern Australia"))
@@ -95,6 +96,13 @@
              (is-not (valid-attack? state 1 "Western Australia" "New Guinea"))
              ; Territories must be neighbors
              (is-not (valid-attack? state 1 "Indonesia" "Eastern Australia")))
+
+           ; Must be in attack phase
+           (is-not (-> (create-game 2 [{:tiles [(create-tile "Indonesia" :troop-count 2)
+                                                "Western Australia"]}
+                                       {:tiles ["New Guinea" "Eastern Australia"]}]
+                                    :turn-phase :card-exchange-phase)
+                       (valid-attack? 1 "Indonesia" "New Guinea")))
 
            ; Valid attack
            (is (-> (create-game 2 [{:tiles [(create-tile "Indonesia"
@@ -117,10 +125,12 @@
          (neighbors? src-name dst-name))))
 
 ; TODO
-;(defn attack
-;  {:test (fn [])}
-;  [state attacker-id src-name dst-name]
-;  ;(if (valid-attack? state attacker-id src-name dst-name)
-;  ;  ; TODO attack
-;  ;  state)
-;  (error "Not implemented"))
+(defn attack
+  {:test (fn [])
+   ; asdf
+   }
+  [state attacker-id src-name dst-name]
+  ;(if (valid-attack? state attacker-id src-name dst-name)
+  ;  ; TODO attack
+  ;  state)
+  (error "Not implemented"))

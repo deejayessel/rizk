@@ -75,8 +75,7 @@
                 3))}
   [state]
   {:pre [(map? state)]}
-  (let [players (get-players state)]
-    (count players)))
+  (count (get-players state)))
 
 (defn get-player
   "Returns the player whose id matches the input id."
@@ -184,30 +183,23 @@
                        player-id)))))))
 
 (defn add-tile
-  "Adds a tile to the state.
-
-  If no troop-count given, defaults to 1."
+  "Adds a tile to the state."
   {:test (fn []
            (is= (as-> (create-empty-state 3) $
-                      (add-tile $ 1 "Indonesia" 1)
+                      (add-tile $ 1 (create-tile "Indonesia"))
                       (get-tiles $ 1)
                       (map :name $))
                 ["Indonesia"]))}
-  ([state owner-id tile-name]
-   (add-tile state owner-id tile-name 1))
-  ([state owner-id tile-name troop-count]
-   {:pre [(map? state) (string? tile-name) (pos-int? troop-count)]}
-   (assoc-in state
-             [:tiles tile-name]
-             {:name        tile-name
-              :owner-id    owner-id
-              :troop-count troop-count})))
+  [state player-id tile]
+  {:pre [(map? state) (map? tile)]}
+  (assoc-in state [:tiles (:name tile)]
+            (assoc tile :owner-id player-id)))
 
 (defn get-tile
   "Returns the tile in the state identified by tile-name."
   {:test (fn []
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 "Indonesia" 1)
+                    (add-tile 1 (create-tile "Indonesia"))
                     (get-tile "Indonesia"))
                 {:name        "Indonesia"
                  :owner-id    1
@@ -217,47 +209,22 @@
   (get-in state [:tiles tile-name]))
 
 (defn add-tiles
-  "Adds a collection of tiles to the state, given their names.
-  Gives each tile a troop count of 1 by default."
+  "Adds a collection of tiles to the state."
   {:test (fn []
            (let [state (-> (create-empty-state 3)
-                           (add-tiles 1 ["Indonesia" "New Guinea"] 1))
+                           (add-tiles 1 [(create-tile "Indonesia")
+                                         (create-tile "New Guinea")]))
                  tiles (get-tiles state)]
              (is= (map :owner-id tiles)
                   [1 1])
              (is= (map :name tiles)
                   ["Indonesia" "New Guinea"])))}
-  ([state owner-id tile-names]
-   (add-tiles state owner-id tile-names 1))
-  ([state owner-id tile-names troop-count]
-   {:pre [(map? state) (every? string? tile-names) (pos-int? troop-count)]}
-   (reduce (fn [state tile-name]
-             (add-tile state owner-id tile-name troop-count))
-           state
-           tile-names)))
-
-(defn remove-tile
-  "Removes a tile from the state."
-  {:test (fn []
-           (is= (-> (create-empty-state 2)
-                    (add-tile 1 "Indonesia")
-                    (remove-tile "Indonesia")
-                    (get-tiles))
-                [])
-           (is= (-> (create-empty-state 2)
-                    (remove-tile "Indonesia")
-                    (get-tiles))
-                [])
-           (is= (as-> (create-empty-state 2) $
-                      (add-tile $ 1 "New Guinea")
-                      (remove-tile $ "Indonesia")
-                      (get-tiles $)
-                      (map :name $))
-                ["New Guinea"]))}
-  ([state tile-name]
-   {:pre [(map? state) (string? tile-name)]}
-   (update state :tiles (fn [tiles]
-                          (dissoc tiles tile-name)))))
+  [state owner-id tiles]
+  {:pre [(map? state) (every? map? tiles)]}
+  (reduce (fn [state tile]
+            (add-tile state owner-id tile))
+          state
+          tiles))
 
 (defn replace-tile
   "Adds new-tile into the state, removing any other tile that shares the same name."
@@ -266,15 +233,13 @@
                                        :troop-count 5
                                        :owner-id 2)]
              (is= (-> (create-empty-state 2)
-                      (add-tile 1 "Indonesia")
+                      (add-tile 1 (create-tile "Indonesia"))
                       (replace-tile new-tile)
                       (get-tile "Indonesia"))
                   new-tile)))}
   [state new-tile]
   {:pre [(map? state) (map? new-tile)]}
-  (assoc-in state
-            [:tiles (:name new-tile)]
-            new-tile))
+  (assoc-in state [:tiles (:name new-tile)] new-tile))
 
 (defn replace-tiles
   "Replaces multiple tiles."
@@ -286,7 +251,8 @@
                                          :troop-count 5
                                          :owner-id 2)]
                  state (-> (create-empty-state 2)
-                           (add-tiles 1 ["New Guinea" "Indonesia"])
+                           (add-tiles 1 [(create-tile "New Guinea")
+                                         (create-tile "Indonesia")])
                            (replace-tiles new-tiles))]
              (is= (->> (get-tiles state)
                        (filter (fn [tile] (or (= (:name tile) "New Guinea")
@@ -305,21 +271,21 @@
   {:test (fn []
            ; update owner
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 "Indonesia")
+                    (add-tile 1 (create-tile "Indonesia"))
                     (update-tile "Indonesia" :owner-id 2)
                     (get-tile "Indonesia")
                     (:owner-id))
                 2)
            ; update troop count
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 "Indonesia")
+                    (add-tile 1 (create-tile "Indonesia"))
                     (update-tile "Indonesia" :troop-count 3)
                     (get-tile "Indonesia")
                     (:troop-count))
                 3)
            ; update with function
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 "Indonesia")
+                    (add-tile 1 (create-tile "Indonesia"))
                     (update-tile "Indonesia" :troop-count inc)
                     (get-tile "Indonesia")
                     (:troop-count))
@@ -379,26 +345,6 @@
   [state player-id cards]
   {:pre [(map? state) (or (nil? cards) (map? cards))]}
   (update-cards state player-id cards))
-
-(defn remove-card
-  "Removes a card from the player's hand."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (add-card 1 :a)
-                    (remove-card 1 :a)
-                    (get-cards 1)
-                    (vals))
-                [0 0 0])
-           (is= (-> (create-empty-state 3)
-                    (add-card 1 :a)
-                    (add-card 1 :a)
-                    (remove-card 1 :a)
-                    (get-cards 1)
-                    (vals))
-                [1 0 0]))}
-  [state player-id card-type]
-  {:pre [(map? state) (keyword? card-type)]}
-  (update-in state [:players player-id :cards card-type] dec))
 
 (defn remove-cards
   "Removes multiple cards from the player's hand."
@@ -466,7 +412,7 @@
                                      tile-name-partns)]
      (reduce (fn [state {id         :player-id
                          tile-names :partition}]
-               (add-tiles state id tile-names))
+               (add-tiles state id (map create-tile tile-names)))
              state
              indexed-partns))))
 
@@ -570,10 +516,8 @@
   {:test (fn []
            (not (-> (create-game 2)
                     (owns-region? 1 "Australia")))
-           (is (-> (create-game 2 [{:tiles ["Indonesia"
-                                            "Western Australia"
-                                            "New Guinea"
-                                            "Eastern Australia"]}])
+           (is (-> (create-game 2 [{:tiles ["Indonesia" "Western Australia"
+                                            "New Guinea" "Eastern Australia"]}])
                    (owns-region? 1 "Australia"))))}
   [state player-id region-name]
   (->> (get-region-defn region-name)
@@ -590,8 +534,8 @@
            (is= (-> (create-game 2)
                     (get-owned-regions 1))
                 ())
-           (is= (-> (create-empty-state 2)
-                    (add-tiles 1 ["Indonesia" "Western Australia" "New Guinea" "Eastern Australia"])
+           (is= (-> (create-game 2 [{:tiles ["Indonesia" "Western Australia"
+                                             "New Guinea" "Eastern Australia"]}])
                     (get-owned-regions 1))
                 ["Australia"]))}
   [state player-id]
