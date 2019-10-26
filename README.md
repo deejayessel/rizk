@@ -76,7 +76,7 @@ Region bonuses scale throughout the course of the game.
 - Basic strategy: [http://web.mit.edu/sp.268/www/2010/risk.pdf](http://web.mit.edu/sp.268/www/2010/risk.pdf)
 
 # Sprint 1 Outline
-- [ ] Clear up which functions receive tiles and which receive names (David)
+- [x] Clear up which functions receive tiles and which receive names (David)
 - [ ] get-rand-card / card-drawing functionality
 - [ ] attack-once
 - [ ] attack-until-exhausted
