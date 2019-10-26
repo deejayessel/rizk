@@ -9,6 +9,7 @@
                                     create-game
                                     create-tile
                                     get-owned-regions
+                                    get-turn-phase
                                     get-player-id-in-turn
                                     get-neighbor-names
                                     get-tile
@@ -22,20 +23,40 @@
                                              "Western Australia"]}
                                     {:tiles ["New Guinea"
                                              "Eastern Australia"]}])
-                    (get-player-region-bonuses 1))
+                    (get-player-region-bonuses "p1"))
                 0)
            (is= (-> (create-game 2 [{:tiles ["Indonesia"
                                              "Western Australia"
                                              "New Guinea"
                                              "Eastern Australia"]}])
-                    (get-player-region-bonuses 1))
+                    (get-player-region-bonuses "p1"))
                 2))}
   [state player-id]
+  {:pre [(map? state) (string? player-id)]}
   (->> (get-owned-regions state player-id)
        (map (fn [region-name]
               (let [region-defn (get-region-defn region-name)]
                 (:region-bonus region-defn))))
        (apply +)))
+
+(defn can-draw-card?
+  "Determines whether a player can draw a card."
+  {:test (fn []
+           ; player must be in turn
+           (is-not (-> (create-game 2)
+                       (can-draw-card? "p2")))
+           ; player must be in card-exchange phase
+           (is-not (-> (create-game 2 [] :turn-phase :attack-phase)
+                       (can-draw-card? "p1")))
+           ; player can draw card
+           (is (-> (create-game 2)
+                   (can-draw-card? "p1"))))}
+  [state player-id]
+  {:pre [(map? state) (string? player-id)]}
+  (and (= (get-player-id-in-turn state)
+          player-id)
+       (= (get-turn-phase state)
+          :card-exchange-phase)))
 
 (defn valid-hand?
   "Checks if a set of cards forms a valid trade.  Players trade in hands of 3 cards:
@@ -63,15 +84,16 @@
                                              "Indonesia"]}
                                     {:tiles ["Western Australia"
                                              "Eastern Australia"]}])
-                    (reinforcement-count 1))
+                    (reinforcement-count "p1"))
                 3)
            (is= (-> (create-game 2 [{:tiles ["New Guinea"
                                              "Indonesia"
                                              "Western Australia"
                                              "Eastern Australia"]}])
-                    (reinforcement-count 1))
+                    (reinforcement-count "p1"))
                 3))}
   [state player-id]
+  {:pre [(map? state) (string? player-id)]}
   (let [tile-count (-> (get-tiles state player-id)
                        (count))
         region-bonus (get-player-region-bonuses state player-id)]
@@ -89,20 +111,20 @@
                                     :turn-phase :attack-phase)]
 
              ; Must attack from friendly territory
-             (is-not (valid-attack? state 1 "New Guinea" "Eastern Australia"))
+             (is-not (valid-attack? state "p1" "New Guinea" "Eastern Australia"))
              ; Must attack unfriendly territory
-             (is-not (valid-attack? state 1 "Indonesia" "Western Australia"))
+             (is-not (valid-attack? state "p1" "Indonesia" "Western Australia"))
              ; Must have more than one troop in territory
-             (is-not (valid-attack? state 1 "Western Australia" "New Guinea"))
+             (is-not (valid-attack? state "p1" "Western Australia" "New Guinea"))
              ; Territories must be neighbors
-             (is-not (valid-attack? state 1 "Indonesia" "Eastern Australia")))
+             (is-not (valid-attack? state "p1" "Indonesia" "Eastern Australia")))
 
            ; Must be in attack phase
            (is-not (-> (create-game 2 [{:tiles [(create-tile "Indonesia" :troop-count 2)
                                                 "Western Australia"]}
                                        {:tiles ["New Guinea" "Eastern Australia"]}]
                                     :turn-phase :card-exchange-phase)
-                       (valid-attack? 1 "Indonesia" "New Guinea")))
+                       (valid-attack? "p1" "Indonesia" "New Guinea")))
 
            ; Valid attack
            (is (-> (create-game 2 [{:tiles [(create-tile "Indonesia"
@@ -110,9 +132,9 @@
                                             "Western Australia"]}
                                    {:tiles ["New Guinea" "Eastern Australia"]}]
                                 :turn-phase :attack-phase)
-                   (valid-attack? 1 "Indonesia" "New Guinea"))))}
+                   (valid-attack? "p1" "Indonesia" "New Guinea"))))}
   [state player-id src-name dst-name]
-  {:pre [(map? state) (string? src-name) (string? dst-name)]}
+  {:pre [(map? state) (string? player-id) (string? src-name) (string? dst-name)]}
   (let [src-tile (get-tile state src-name)
         dst-tile (get-tile state dst-name)]
     (and (= (get-player-id-in-turn state) player-id)
@@ -123,14 +145,3 @@
                player-id)
          (> (:troop-count src-tile) 1)
          (neighbors? src-name dst-name))))
-
-; TODO
-(defn attack
-  {:test (fn [])
-   ; asdf
-   }
-  [state attacker-id src-name dst-name]
-  ;(if (valid-attack? state attacker-id src-name dst-name)
-  ;  ; TODO attack
-  ;  state)
-  (error "Not implemented"))

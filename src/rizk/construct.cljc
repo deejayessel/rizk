@@ -14,29 +14,29 @@
   ; TODO player names?
   {:test (fn []
            (is= (create-empty-state 2)
-                {:player-in-turn             1
+                {:player-in-turn             "p1"
                  :turn-phase                 :card-exchange-phase
                  :seed                       0
-                 :players                    {1 {:id    1
-                                                 :cards {:a 0
-                                                         :b 0
-                                                         :c 0}}
-                                              2 {:id    2
-                                                 :cards {:a 0
-                                                         :b 0
-                                                         :c 0}}}
+                 :players                    {"p1" {:id    "p1"
+                                                    :cards {:a 0
+                                                            :b 0
+                                                            :c 0}}
+                                              "p2" {:id    "p2"
+                                                    :cards {:a 0
+                                                            :b 0
+                                                            :c 0}}}
                  :tiles                      {}
                  :initial-army-size          20
                  :initial-reinforcement-size 5
                  :initial-card-exchange-rate 4}))}
   [num-players]
   {:pre [(int? num-players) (>= num-players 2)]}
-  {:player-in-turn             1
+  {:player-in-turn             "p1"
    :turn-phase                 :card-exchange-phase
    :seed                       0
    :players                    (->> (range 1 (inc num-players))
                                     (map (fn [player-num]
-                                           {:id    player-num
+                                           {:id    (str "p" player-num)
                                             :cards {:a 0 :b 0 :c 0}}))
                                     (reduce (fn [a v]
                                               (assoc a (:id v) v))
@@ -46,12 +46,48 @@
    :initial-reinforcement-size 5
    :initial-card-exchange-rate 4})
 
+(defn get-turn-phase
+  "Returns the turn-phase of the player in turn."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (get-turn-phase))
+                :card-exchange-phase))}
+  [state]
+  (:turn-phase state))
+
+(defn update-turn-phase
+  "Updates the turn phase."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (update-turn-phase :attack-phase)
+                    (get-turn-phase))
+                :attack-phase)
+           (is= (-> (create-empty-state 2)
+                    (update-turn-phase (fn [_] :attack-phase))
+                    (get-turn-phase))
+                :attack-phase))}
+  [state fn-or-val]
+  {:pre [(map? state) (or (fn? fn-or-val) (keyword? fn-or-val))]}
+  (if (fn? fn-or-val)
+    (update state :turn-phase fn-or-val)
+    (assoc state :turn-phase fn-or-val)))
+
+(defn update-seed
+  "Updates the state's seed."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (update-seed 100)
+                    (:seed))
+                100))}
+  [state seed]
+  (assoc state :seed seed))
+
 (defn get-player-id-in-turn
   "Returns the id of the player in turn."
   {:test (fn []
            (is= (-> (create-empty-state 2)
                     (:player-in-turn))
-                1))}
+                "p1"))}
   [state]
   (:player-in-turn state))
 
@@ -61,11 +97,24 @@
            (is= (->> (create-empty-state 3)
                      (get-players)
                      (map :id))
-                [1 2 3]))}
+                ["p1" "p2" "p3"]))}
   [state]
   {:pre [(map? state)]}
   (-> (:players state)
       (vals)))
+
+(defn get-player
+  "Returns the player whose id matches the input id."
+  {:test (fn []
+           (is= (-> (create-empty-state 3)
+                    (get-player "p2"))
+                {:id    "p2"
+                 :cards {:a 0
+                         :b 0
+                         :c 0}}))}
+  [state player-id]
+  {:pre [(map? state) (string? player-id)]}
+  (get-in state [:players player-id]))
 
 (defn player-count
   "Returns the number of players in the state."
@@ -77,31 +126,19 @@
   {:pre [(map? state)]}
   (count (get-players state)))
 
-(defn get-player
-  "Returns the player whose id matches the input id."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (get-player 2))
-                {:id    2
-                 :cards {:a 0
-                         :b 0
-                         :c 0}}))}
-  [state player-id]
-  {:pre [(pos-int? player-id) (<= 1 player-id (player-count state))]}
-  (get-in state [:players player-id]))
-
 (defn get-opponent-ids
   "Returns the ids of all opponents of the input player."
   {:test (fn []
            (is= (-> (create-empty-state 2)
-                    (get-opponent-ids 1))
-                [2])
-           (is= (-> (create-empty-state 10)
-                    (get-opponent-ids 5)
+                    (get-opponent-ids "p1"))
+                ["p2"])
+           (is= (-> (create-empty-state 9)
+                    (get-opponent-ids "p5")
                     (sort))
-                [1 2 3 4 6 7 8 9 10]))}
+                ["p1" "p2" "p3" "p4"
+                 "p6" "p7" "p8" "p9"]))}
   [state player-id]
-  {:pre [(map? state)]}
+  {:pre [(map? state) (string? player-id)]}
   (->> (get-players state)
        (remove (fn [player] (= (:id player) player-id)))
        (map :id)))
@@ -110,12 +147,12 @@
   "Returns the player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
-                    (get-cards 1))
+                    (get-cards "p1"))
                 {:a 0
                  :b 0
                  :c 0}))}
   ([state player-id]
-   {:pre [(map? state)]}
+   {:pre [(map? state) (string? player-id)]}
    (get-in state [:players player-id :cards])))
 
 (defn create-tile
@@ -168,7 +205,7 @@
                     (get-tiles))
                 [])
            (is= (-> (create-empty-state 2)
-                    (get-tiles 1))
+                    (get-tiles "p1"))
                 []))}
   ([state]
    {:pre [(map? state)]}
@@ -176,7 +213,7 @@
        (vals)
        (vec)))
   ([state player-id]
-   {:pre [(map? state)]}
+   {:pre [(map? state) (string? player-id)]}
    (->> (get-tiles state)
         (filter (fn [tile]
                   (= (:owner-id tile
@@ -186,12 +223,12 @@
   "Adds a tile to the state."
   {:test (fn []
            (is= (as-> (create-empty-state 3) $
-                      (add-tile $ 1 (create-tile "Indonesia"))
-                      (get-tiles $ 1)
+                      (add-tile $ "p1" (create-tile "Indonesia"))
+                      (get-tiles $ "p1")
                       (map :name $))
                 ["Indonesia"]))}
   [state player-id tile]
-  {:pre [(map? state) (map? tile)]}
+  {:pre [(map? state) (string? player-id) (map? tile)]}
   (assoc-in state [:tiles (:name tile)]
             (assoc tile :owner-id player-id)))
 
@@ -199,10 +236,10 @@
   "Returns the tile in the state identified by tile-name."
   {:test (fn []
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 (create-tile "Indonesia"))
+                    (add-tile "p1" (create-tile "Indonesia"))
                     (get-tile "Indonesia"))
                 {:name        "Indonesia"
-                 :owner-id    1
+                 :owner-id    "p1"
                  :troop-count 1}))}
   [state tile-name]
   {:pre [(map? state) (string? tile-name)]}
@@ -212,15 +249,15 @@
   "Adds a collection of tiles to the state."
   {:test (fn []
            (let [state (-> (create-empty-state 3)
-                           (add-tiles 1 [(create-tile "Indonesia")
-                                         (create-tile "New Guinea")]))
+                           (add-tiles "p1" [(create-tile "Indonesia")
+                                            (create-tile "New Guinea")]))
                  tiles (get-tiles state)]
              (is= (map :owner-id tiles)
-                  [1 1])
+                  ["p1" "p1"])
              (is= (map :name tiles)
                   ["Indonesia" "New Guinea"])))}
   [state owner-id tiles]
-  {:pre [(map? state) (every? map? tiles)]}
+  {:pre [(map? state) (string? owner-id) (every? map? tiles)]}
   (reduce (fn [state tile]
             (add-tile state owner-id tile))
           state
@@ -231,9 +268,9 @@
   {:test (fn []
            (let [new-tile (create-tile "Indonesia"
                                        :troop-count 5
-                                       :owner-id 2)]
+                                       :owner-id "p2")]
              (is= (-> (create-empty-state 2)
-                      (add-tile 1 (create-tile "Indonesia"))
+                      (add-tile "p1" (create-tile "Indonesia"))
                       (replace-tile new-tile)
                       (get-tile "Indonesia"))
                   new-tile)))}
@@ -246,13 +283,13 @@
   {:test (fn []
            (let [new-tiles [(create-tile "New Guinea"
                                          :troop-count 7
-                                         :owner-id 2)
+                                         :owner-id "p2")
                             (create-tile "Indonesia"
                                          :troop-count 5
-                                         :owner-id 2)]
+                                         :owner-id "p2")]
                  state (-> (create-empty-state 2)
-                           (add-tiles 1 [(create-tile "New Guinea")
-                                         (create-tile "Indonesia")])
+                           (add-tiles "p1" [(create-tile "New Guinea")
+                                            (create-tile "Indonesia")])
                            (replace-tiles new-tiles))]
              (is= (->> (get-tiles state)
                        (filter (fn [tile] (or (= (:name tile) "New Guinea")
@@ -271,28 +308,29 @@
   {:test (fn []
            ; update owner
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 (create-tile "Indonesia"))
-                    (update-tile "Indonesia" :owner-id 2)
+                    (add-tile "p1" (create-tile "Indonesia"))
+                    (update-tile "Indonesia" :owner-id "p2")
                     (get-tile "Indonesia")
                     (:owner-id))
-                2)
+                "p2")
            ; update troop count
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 (create-tile "Indonesia"))
+                    (add-tile "p1" (create-tile "Indonesia"))
                     (update-tile "Indonesia" :troop-count 3)
                     (get-tile "Indonesia")
                     (:troop-count))
                 3)
            ; update with function
            (is= (-> (create-empty-state 2)
-                    (add-tile 1 (create-tile "Indonesia"))
+                    (add-tile "p1" (create-tile "Indonesia"))
                     (update-tile "Indonesia" :troop-count inc)
                     (get-tile "Indonesia")
                     (:troop-count))
                 2))}
   [state tile-name key fn-or-val]
   {:pre [(map? state) (string? tile-name) (or (fn? fn-or-val)
-                                              (pos-int? fn-or-val))]}
+                                              (pos-int? fn-or-val)
+                                              (string? fn-or-val))]}
   (let [tile (get-tile state tile-name)]
     (replace-tile state (if (fn? fn-or-val)
                           (update tile key fn-or-val)
@@ -302,12 +340,12 @@
   "Adds a card to the specified player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
-                    (add-card 1 :a)
-                    (get-cards 1)
+                    (add-card "p1" :a)
+                    (get-cards "p1")
                     (:a))
                 1))}
   [state player-id card-type]
-  {:pre [(map? state) (keyword? card-type)]}
+  {:pre [(map? state) (string? player-id) (keyword? card-type)]}
   (update-in state [:players player-id :cards card-type] inc))
 
 (defn- update-cards
@@ -315,17 +353,17 @@
   Guarantees that no player ends up with a negative number of cards."
   {:test (fn []
            (is= (-> (create-empty-state 3)
-                    (update-cards 1 {:a 1 :b 2})
-                    (update-cards 1 {:a 2 :b 0})
-                    (get-cards 1))
+                    (update-cards "p1" {:a 1 :b 2})
+                    (update-cards "p1" {:a 2 :b 0})
+                    (get-cards "p1"))
                 {:a 3 :b 2 :c 0})
            (is= (-> (create-empty-state 3)
-                    (update-cards 1 {:a 1 :b 2})
-                    (update-cards 1 {:a -2 :b 1})
-                    (get-cards 1))
+                    (update-cards "p1" {:a 1 :b 2})
+                    (update-cards "p1" {:a -2 :b 1})
+                    (get-cards "p1"))
                 {:a 0 :b 3 :c 0}))}
   [state player-id cards]
-  {:pre [(map? state) (or (nil? cards) (map? cards))]}
+  {:pre [(map? state) (string? player-id) (or (nil? cards) (map? cards))]}
   (let [update-fn (fn [state card-type quantity]
                     (if (contains? cards card-type)
                       (update-in state
@@ -338,28 +376,29 @@
   "Adds cards to a player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
-                    (add-cards 1 {:a 1 :b 2})
-                    (add-cards 1 {:a 2 :b 0})
-                    (get-cards 1))
+                    (add-cards "p1" {:a 1 :b 2})
+                    (add-cards "p1" {:a 2 :b 0})
+                    (get-cards "p1"))
                 {:a 3 :b 2 :c 0}))}
   [state player-id cards]
-  {:pre [(map? state) (or (nil? cards) (map? cards))]}
+  {:pre [(map? state) (string? player-id) (or (nil? cards) (map? cards))]}
   (update-cards state player-id cards))
 
 (defn remove-cards
   "Removes multiple cards from the player's hand."
   {:test (fn []
            (is= (-> (create-empty-state 3)
-                    (add-cards 1 {:a 1 :b 2})
-                    (remove-cards 1 {:a 1 :b 1})
-                    (get-cards 1))
+                    (add-cards "p1" {:a 1 :b 2})
+                    (remove-cards "p1" {:a 1 :b 1})
+                    (get-cards "p1"))
                 {:a 0 :b 1 :c 0})
            (is= (-> (create-empty-state 3)
-                    (add-cards 1 {:a 1})
-                    (remove-cards 1 {:b 1})
-                    (get-cards 1))
+                    (add-cards "p1" {:a 1})
+                    (remove-cards "p1" {:b 1})
+                    (get-cards "p1"))
                 {:a 1 :b 0 :c 0}))}
   [state player-id cards]
+  {:pre [(map? state) (string? player-id) (or (nil? cards) (map? cards))]}
   (let [neg-cards (reduce (fn [cards card-type] (update cards card-type -))
                           cards
                           (keys cards))]
@@ -407,7 +446,7 @@
          player-count (player-count state)
          [seed tile-name-partns] (random-partition-with-seed seed player-count tile-names)
          state (assoc state :seed seed)                     ;update seed in state
-         indexed-partns (map-indexed (fn [index part] {:player-id (inc index)
+         indexed-partns (map-indexed (fn [index part] {:player-id (str "p" (inc index))
                                                        :partition part})
                                      tile-name-partns)]
      (reduce (fn [state {id         :player-id
@@ -424,28 +463,28 @@
                                  :cards {:a 1 :b 2 :c 0}}
                                 {:tiles ["Eastern Australia" "Western Australia"]}]
                              :initial-army-size 30)
-                {:player-in-turn             1
+                {:player-in-turn            "p1"
                  :turn-phase                 :card-exchange-phase
                  :seed                       -9203025489357073502
-                 :players                    {1 {:id    1
+                 :players                    {"p1" {:id    "p1"
                                                  :cards {:a 1
                                                          :b 2
                                                          :c 0}}
-                                              2 {:id    2
+                                              "p2" {:id    "p2"
                                                  :cards {:a 0
                                                          :b 0
                                                          :c 0}}}
                  :tiles                      {"Indonesia"         {:name        "Indonesia"
-                                                                   :owner-id    1
+                                                                   :owner-id    "p1"
                                                                    :troop-count 10}
                                               "New Guinea"        {:name        "New Guinea"
-                                                                   :owner-id    1
+                                                                   :owner-id    "p1"
                                                                    :troop-count 1}
                                               "Eastern Australia" {:name        "Eastern Australia"
-                                                                   :owner-id    2
+                                                                   :owner-id    "p2"
                                                                    :troop-count 1}
                                               "Western Australia" {:name        "Western Australia"
-                                                                   :owner-id    2
+                                                                   :owner-id    "p2"
                                                                    :troop-count 1}}
                  :initial-army-size          30
                  :initial-reinforcement-size 5
@@ -457,7 +496,7 @@
   ([num-players data & kvs]
    {:pre [(>= num-players 2) (vector? data)]}
    (let [players-data (map-indexed (fn [index player-data]
-                                     (assoc player-data :player-id (inc index)))
+                                     (assoc player-data :player-id (str "p" (inc index))))
                                    data)
          state (as-> (create-game num-players) $
                      (reduce (fn [state {player-id :player-id
@@ -486,10 +525,10 @@
                     (get-tiles-from-names ["Indonesia"
                                            "Western Australia"]))
                 [{:name        "Indonesia"
-                  :owner-id    1
+                  :owner-id    "p1"
                   :troop-count 1}
                  {:name        "Western Australia"
-                  :owner-id    1
+                  :owner-id    "p1"
                   :troop-count 1}]))}
   [state names]
   {:pre [(map? state) (vector? names) (every? string? names)]}
@@ -515,11 +554,12 @@
   "Checks if a player owns a region."
   {:test (fn []
            (not (-> (create-game 2)
-                    (owns-region? 1 "Australia")))
+                    (owns-region? "p1" "Australia")))
            (is (-> (create-game 2 [{:tiles ["Indonesia" "Western Australia"
                                             "New Guinea" "Eastern Australia"]}])
-                   (owns-region? 1 "Australia"))))}
+                   (owns-region? "p1" "Australia"))))}
   [state player-id region-name]
+  {:pre [(map? state) (string? player-id) (string? region-name)]}
   (->> (get-region-defn region-name)
        (:tiles)
        (get-tiles-from-names state)
@@ -532,13 +572,14 @@
   "Returns the regions owned by the player."
   {:test (fn []
            (is= (-> (create-game 2)
-                    (get-owned-regions 1))
+                    (get-owned-regions "p1"))
                 ())
            (is= (-> (create-game 2 [{:tiles ["Indonesia" "Western Australia"
                                              "New Guinea" "Eastern Australia"]}])
-                    (get-owned-regions 1))
+                    (get-owned-regions "p1"))
                 ["Australia"]))}
   [state player-id]
+  {:pre [(map? state) (string? player-id)]}
   (let [region-names (map :name (get-region-defns))]
     (filter (fn [region-name]
               (owns-region? state player-id region-name))
