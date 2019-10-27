@@ -75,12 +75,34 @@ Region bonuses scale throughout the course of the game.
 - Changing the behavior of fns such as `attack-success-chance` can change gameplay to encourage more aggressive or defensive play.  Another interesting fn is `valid-troop-move?`: allowing players to move their troops more freely during the coordination phase can reward dynamic play.
 - Basic strategy: [http://web.mit.edu/sp.268/www/2010/risk.pdf](http://web.mit.edu/sp.268/www/2010/risk.pdf)
 
-# Sprint 1 Outline
-- [x] Clear up which functions receive tiles and which receive names (David)
-- [x] get-rand-card / card-drawing functionality
-- [x] attack-once
-- [ ] attack-until-exhausted
-- [ ] card trade-in mechanisms
+# Sprints
+
+## Sprint 1: Attack
+- [x] `attack-once`
+- [ ] `attack-until-exhausted`, `attack-until-k-exhausted`
+  - `attack-until-exhausted`: attack until either the attacker or the defender has 0 troops remaining in src/dst tiles
+  - `attack-until-k-exhausted`: attack until either `k` attacker troops are killed or the defending territory is captured, whichever happens first
+- [ ] troop movement after attack completed
+  > In this third case, the attacker takes over the territory and must move at least as many troops as dice rolled in the winning roll and at most the number of remaining troops in the attacking territory minus the one troop that must stay behind to occupy the territory. 
+
+## Sprint 2: Card-trading
+- [x] determine valid trades
+- [ ] determine card trade-in value (formula & impl)
+  - trade-in value should go up by some rule:
+    - increase by constant (e.g. 2 cards) at every trade?
+    - increase by compounding rate (e.g. 10%) at every trade?
+    - increase at every turn?
+    - set as some fraction of the total number of troops on the board?
+- [ ] when a player captures the last territory of another player (i.e., when a player removes another player from the game), the attacker takes the defender's cards
+
+## Sprint 3: Coordination phase
+- [ ] player allowed to move one group of as many troops as they like from one territory to another (bounded by the number of troops in the territory)
+
+## Sprint 4: Setup phase
+- set up the game by having players take turns seeding troops
+
+## Sprint 5: Game API
 - [ ] phase- and player-turn- transitions
-- [ ] implement coordination phase: player allowed to move one group of as many troops as they like from one territory to another (bounded by the number of troops in the territory)
+
+## Miscellaneous
 - [ ] (Optional) better testing map (shorter names, simpler layout, easy to understand)
