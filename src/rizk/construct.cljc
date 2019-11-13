@@ -2,8 +2,8 @@
   (:require [ysera.test :refer [is= is is-not error?]]
             [ysera.error :refer [error]]
             [rizk.util :refer [int-or-else]]
-            [rizk.definitions :refer [get-all-tile-defns
-                                      get-tile-defn
+            [rizk.definitions :refer [get-all-node-defns
+                                      get-node-defn
                                       get-region-defn
                                       get-region-defns]]
             [rizk.random :refer [random-partition-with-seed]]
@@ -11,11 +11,10 @@
 
 (defn create-empty-state
   "Creates an empty state."
-  ; TODO player names?
   {:test (fn []
            (is= (create-empty-state 2)
                 {:player-in-turn             "p1"
-                 :turn-phase                 :card-exchange-phase
+                 :turn-phase                 :reinforcement-phase
                  :seed                       0
                  :players                    {"p1" {:id    "p1"
                                                     :cards {:a 0
@@ -25,26 +24,26 @@
                                                     :cards {:a 0
                                                             :b 0
                                                             :c 0}}}
-                 :tiles                      {}
+                 :nodes                      {}
                  :initial-army-size          20
-                 :initial-reinforcement-size 5
-                 :initial-card-exchange-rate 4}))}
+                 :initial-reinforcement-size 3
+                 :initial-card-exchange-rate 0}))}
   [num-players]
   {:pre [(int? num-players) (>= num-players 2)]}
   {:player-in-turn             "p1"
-   :turn-phase                 :card-exchange-phase
+   :turn-phase                 :reinforcement-phase
    :seed                       0
    :players                    (->> (range 1 (inc num-players))
                                     (map (fn [player-num]
                                            {:id    (str "p" player-num)
                                             :cards {:a 0 :b 0 :c 0}}))
-                                    (reduce (fn [a v]
-                                              (assoc a (:id v) v))
+                                    (reduce (fn [map player]
+                                              (assoc map (:id player) player))
                                             {}))
-   :tiles                      {}
+   :nodes                      {}
    :initial-army-size          20
-   :initial-reinforcement-size 5
-   :initial-card-exchange-rate 4})
+   :initial-reinforcement-size 3
+   :initial-card-exchange-rate 0})
 
 (defn update-turn-phase
   "Updates the turn phase."
@@ -63,7 +62,7 @@
     (update state :turn-phase fn-or-val)
     (assoc state :turn-phase fn-or-val)))
 
-(defn get-player-id-in-turn
+(defn active-player-id
   "Returns the id of the player in turn."
   {:test (fn []
            (is= (-> (create-empty-state 2)
@@ -107,14 +106,14 @@
   {:pre [(map? state)]}
   (count (get-players state)))
 
-(defn get-opponent-ids
+(defn opponent-ids
   "Returns the ids of all opponents of the input player."
   {:test (fn []
            (is= (-> (create-empty-state 2)
-                    (get-opponent-ids "p1"))
+                    (opponent-ids "p1"))
                 ["p2"])
            (is= (-> (create-empty-state 9)
-                    (get-opponent-ids "p5")
+                    (opponent-ids "p5")
                     (sort))
                 ["p1" "p2" "p3" "p4"
                  "p6" "p7" "p8" "p9"]))}
@@ -136,186 +135,196 @@
    {:pre [(map? state) (string? player-id)]}
    (get-in state [:players player-id :cards])))
 
-(defn create-tile
-  "Creates a tile without owner-id."
+(defn create-node
+  "Creates a node without owner-id."
   {:test (fn []
-           (is= (create-tile "Indonesia")
-                {:name        "Indonesia"
+           (is= (create-node "i")
+                {:name        "i"
                  :troop-count 1})
-           (is= (create-tile "Indonesia" :troop-count 2)
-                {:name        "Indonesia"
+           (is= (create-node "i" :troop-count 2)
+                {:name        "i"
                  :troop-count 2})
-           (error? (create-tile "Williamstown")))}
-  [tile-name & kvs]
-  (let [definition (get-tile-defn tile-name)
+           (error? (create-node "Williamstown")))}
+  [node-name & kvs]
+  (let [definition (get-node-defn node-name)
         {troop-count :troop-count} kvs
-        tile {:name        tile-name
+        node {:name        node-name
               :troop-count (int-or-else troop-count 1)}]
     (if (nil? definition)
-      (error "Couldn't get definition of " tile-name ". Are definitions loaded?")
+      (error "Couldn't get definition of " node-name ". Are definitions loaded?")
       (if (empty? kvs)
-        tile
-        (apply assoc tile kvs)))))
+        node
+        (apply assoc node kvs)))))
 
-(defn get-neighbor-names
-  "Returns the names of all neighbors of the tile with the given name."
+(defn neighbor-names
+  "Returns the names of all neighbors of the node with the given name."
   {:test (fn []
-           (is= (get-neighbor-names "Indonesia")
-                ["New Guinea"
-                 "Western Australia"]))}
-  [tile-name]
-  {:pre [(string? tile-name)]}
-  (let [tile-defn (get-tile-defn tile-name)]
-    (:neighbors tile-defn)))
+           (is= (neighbor-names "i")
+                ["ii" "iv"]))}
+  [node-name]
+  {:pre [(string? node-name)]}
+  (let [node-defn (get-node-defn node-name)]
+    (:neighbors node-defn)))
 
-(defn get-region-name
-  "Returns the name of the region containing the input tile."
+(defn containing-region-name
+  "Returns the name of the region containing the input node."
   {:test (fn []
-           (is= (get-region-name "Western Australia")
-                "Australia"))}
-  [tile-name]
-  {:pre [(string? tile-name)]}
-  (let [tile-defn (get-tile-defn tile-name)]
-    (:region tile-defn)))
+           (is= (containing-region-name "i")
+                "square"))}
+  [node-name]
+  {:pre [(string? node-name)]}
+  (let [node-defn (get-node-defn node-name)]
+    (:region node-defn)))
 
-(defn get-tiles
-  "Returns all tiles in the state or, optionally,
+(defn get-nodes
+  "Returns all nodes in the state or, optionally,
   in a given player's possession."
   {:test (fn []
            (is= (-> (create-empty-state 2)
-                    (get-tiles))
+                    (get-nodes))
                 [])
            (is= (-> (create-empty-state 2)
-                    (get-tiles "p1"))
+                    (get-nodes "p1"))
                 []))}
   ([state]
    {:pre [(map? state)]}
-   (-> (:tiles state)
+   (-> (:nodes state)
        (vals)
        (vec)))
   ([state player-id]
    {:pre [(map? state) (string? player-id)]}
-   (->> (get-tiles state)
-        (filter (fn [tile]
-                  (= (:owner-id tile
+   (->> (get-nodes state)
+        (filter (fn [node]
+                  (= (:owner-id node
                        player-id)))))))
 
-(defn add-tile
-  "Adds a tile to the state."
+(defn add-node
+  "Adds a node to the state."
   {:test (fn []
            (is= (as-> (create-empty-state 3) $
-                      (add-tile $ "p1" (create-tile "Indonesia"))
-                      (get-tiles $ "p1")
+                      (add-node $ "p1" (create-node "i"))
+                      (get-nodes $ "p1")
                       (map :name $))
-                ["Indonesia"]))}
-  [state player-id tile]
-  {:pre [(map? state) (string? player-id) (map? tile)]}
-  (assoc-in state [:tiles (:name tile)]
-            (assoc tile :owner-id player-id)))
+                ["i"]))}
+  [state player-id node]
+  {:pre [(map? state) (string? player-id) (map? node)]}
+  (assoc-in state [:nodes (:name node)]
+            (assoc node :owner-id player-id)))
 
-(defn get-tile
-  "Returns the tile in the state identified by tile-name."
+(defn get-node
+  "Returns the node in the state identified by node-name."
   {:test (fn []
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "Indonesia"))
-                    (get-tile "Indonesia"))
-                {:name        "Indonesia"
+                    (add-node "p1" (create-node "i"))
+                    (get-node "i"))
+                {:name        "i"
                  :owner-id    "p1"
                  :troop-count 1}))}
-  [state tile-name]
-  {:pre [(map? state) (string? tile-name)]}
-  (get-in state [:tiles tile-name]))
+  [state node-name]
+  {:pre [(map? state) (string? node-name)]}
+  (get-in state [:nodes node-name]))
 
-(defn add-tiles
-  "Adds a collection of tiles to the state."
+(defn get-in-node
+  "Returns the value associated with the key in the node."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-node "p1" (create-node "i"))
+                    (get-in-node "i" :owner-id))
+                "p1"))}
+  [state node-name key]
+  {:pre [(map? state) (string? node-name) (keyword? key)]}
+  (get-in state [:nodes node-name key]))
+
+(defn add-nodes
+  "Adds a collection of nodes to the state."
   {:test (fn []
            (let [state (-> (create-empty-state 3)
-                           (add-tiles "p1" [(create-tile "Indonesia")
-                                            (create-tile "New Guinea")]))
-                 tiles (get-tiles state)]
-             (is= (map :owner-id tiles)
+                           (add-nodes "p1" [(create-node "i")
+                                            (create-node "ii")]))
+                 nodes (get-nodes state)]
+             (is= (map :owner-id nodes)
                   ["p1" "p1"])
-             (is= (map :name tiles)
-                  ["Indonesia" "New Guinea"])))}
-  [state owner-id tiles]
-  {:pre [(map? state) (string? owner-id) (every? map? tiles)]}
-  (reduce (fn [state tile]
-            (add-tile state owner-id tile))
+             (is= (map :name nodes)
+                  ["i" "ii"])))}
+  [state owner-id nodes]
+  {:pre [(map? state) (string? owner-id) (every? map? nodes)]}
+  (reduce (fn [state node]
+            (add-node state owner-id node))
           state
-          tiles))
+          nodes))
 
-(defn replace-tile
-  "Adds new-tile into the state, removing any other tile that shares the same name."
+(defn replace-node
+  "Adds new-node into the state, removing any other node that shares the same name."
   {:test (fn []
-           (let [new-tile (create-tile "Indonesia"
+           (let [new-node (create-node "i"
                                        :troop-count 5
                                        :owner-id "p2")]
              (is= (-> (create-empty-state 2)
-                      (add-tile "p1" (create-tile "Indonesia"))
-                      (replace-tile new-tile)
-                      (get-tile "Indonesia"))
-                  new-tile)))}
-  [state new-tile]
-  {:pre [(map? state) (map? new-tile)]}
-  (assoc-in state [:tiles (:name new-tile)] new-tile))
+                      (add-node "p1" (create-node "i"))
+                      (replace-node new-node)
+                      (get-node "i"))
+                  new-node)))}
+  [state new-node]
+  {:pre [(map? state) (map? new-node)]}
+  (assoc-in state [:nodes (:name new-node)] new-node))
 
-(defn replace-tiles
-  "Replaces multiple tiles."
+(defn replace-nodes
+  "Replaces multiple nodes."
   {:test (fn []
-           (let [new-tiles [(create-tile "New Guinea"
-                                         :troop-count 7
-                                         :owner-id "p2")
-                            (create-tile "Indonesia"
+           (let [new-nodes [(create-node "i"
                                          :troop-count 5
+                                         :owner-id "p2")
+                            (create-node "ii"
+                                         :troop-count 7
                                          :owner-id "p2")]
                  state (-> (create-empty-state 2)
-                           (add-tiles "p1" [(create-tile "New Guinea")
-                                            (create-tile "Indonesia")])
-                           (replace-tiles new-tiles))]
-             (is= (->> (get-tiles state)
-                       (filter (fn [tile] (or (= (:name tile) "New Guinea")
-                                              (= (:name tile) "Indonesia")))))
-                  new-tiles)))}
-  [state new-tiles]
-  {:pre [(map? state) (coll? new-tiles) (every? map? new-tiles)]}
-  (reduce (fn [state new-tile]
-            (replace-tile state new-tile))
+                           (add-nodes "p1" [(create-node "i")
+                                            (create-node "ii")])
+                           (replace-nodes new-nodes))]
+             (is= (->> (get-nodes state)
+                       (filter (fn [n] (or (= "i" (:name n))
+                                           (= "ii" (:name n))))))
+                  new-nodes)))}
+  [state new-nodes]
+  {:pre [(map? state) (coll? new-nodes) (every? map? new-nodes)]}
+  (reduce (fn [state new-node]
+            (replace-node state new-node))
           state
-          new-tiles))
+          new-nodes))
 
-(defn update-tile
-  "Updates a tile, given a key and either a function to apply to the current
+(defn update-node
+  "Updates a node, given a key and either a function to apply to the current
   value, or a value to override to the current value with."
   {:test (fn []
            ; update owner
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "Indonesia"))
-                    (update-tile "Indonesia" :owner-id "p2")
-                    (get-tile "Indonesia")
+                    (add-node "p1" (create-node "i"))
+                    (update-node "i" :owner-id "p2")
+                    (get-node "i")
                     (:owner-id))
                 "p2")
            ; update troop count
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "Indonesia"))
-                    (update-tile "Indonesia" :troop-count 3)
-                    (get-tile "Indonesia")
+                    (add-node "p1" (create-node "i"))
+                    (update-node "i" :troop-count 3)
+                    (get-node "i")
                     (:troop-count))
                 3)
            ; update with function
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "Indonesia"))
-                    (update-tile "Indonesia" :troop-count inc)
-                    (get-tile "Indonesia")
+                    (add-node "p1" (create-node "i"))
+                    (update-node "i" :troop-count inc)
+                    (get-node "i")
                     (:troop-count))
                 2))}
-  [state tile-name key fn-or-val]
-  {:pre [(map? state) (string? tile-name) (keyword? key) (or (fn? fn-or-val)
+  [state node-name key fn-or-val]
+  {:pre [(map? state) (string? node-name) (keyword? key) (or (fn? fn-or-val)
                                                              (pos-int? fn-or-val)
                                                              (string? fn-or-val))]}
-  (let [tile (get-tile state tile-name)]
-    (replace-tile state (if (fn? fn-or-val)
-                          (update tile key fn-or-val)
-                          (assoc tile key fn-or-val)))))
+  (let [node (get-node state node-name)]
+    (replace-node state (if (fn? fn-or-val)
+                          (update node key fn-or-val)
+                          (assoc node key fn-or-val)))))
 
 (defn add-card
   "Adds a card to the specified player's hand."
@@ -385,95 +394,95 @@
                           (keys cards))]
     (update-cards state player-id neg-cards)))
 
-(defn randomly-assign-tiles
-  "Randomly assigns tiles to the players in the game.
+(defn randomly-assign-nodes
+  "Randomly assigns nodes to the players in the game.
   Each assigned territory has 1 troop present.
   In the case that the number of players does not divide the number of
-  tiles, no two players should have a tile-count differing by more than 1."
+  nodes, no two players should have a node-count differing by more than 1."
   {:test (fn []
-           ; Check that no two players have tile-counts differing by more than 1
+           ; Check that no two players have node-counts differing by more than 1
            (let [counts (->> (create-empty-state 3)
-                             (randomly-assign-tiles)
-                             (get-tiles)
+                             (randomly-assign-nodes)
+                             (get-nodes)
                              (map :owner-id)
                              (frequencies)
                              (vals))]
              (is (<= (- (apply max counts)
                         (apply min counts))
                      1)))
-           ; Check that all tiles are assigned
+           ; Check that all nodes are assigned
            (is (->> (create-empty-state 2)
-                    (randomly-assign-tiles)
-                    (get-tiles)
+                    (randomly-assign-nodes)
+                    (get-nodes)
                     (every? (fn [t] (contains? t :owner-id)))
                     ))
-           ; All tiles have 1 troop count
+           ; All nodes have 1 troop count
            (is (->> (create-empty-state 3)
-                    (randomly-assign-tiles)
-                    (get-tiles)
+                    (randomly-assign-nodes)
+                    (get-nodes)
                     (every? (fn [t] (= (:troop-count t) 1)))))
-           ; Randomly assign on subset of tiles
-           (is= (->> (randomly-assign-tiles (create-empty-state 3)
-                                            ["Australia" "New Guinea"])
-                     (get-tiles)
+           ; Randomly assign on subset of nodes
+           (is= (->> (randomly-assign-nodes (create-empty-state 3)
+                                            ["i" "ii"])
+                     (get-nodes)
                      (map :name))
-                ["Australia" "New Guinea"]))}
+                ["i" "ii"]))}
   ([state]
    {:pre [(map? state)]}
-   (randomly-assign-tiles state (map :name (get-all-tile-defns))))
-  ([state tile-names]
-   {:pre [(map? state) (every? string? tile-names)]}
+   (randomly-assign-nodes state (map :name (get-all-node-defns))))
+  ([state node-names]
+   {:pre [(map? state) (every? string? node-names)]}
    (let [seed (:seed state)
          player-count (player-count state)
-         [seed tile-name-partns] (random-partition-with-seed seed player-count tile-names)
+         [seed node-name-partns] (random-partition-with-seed seed player-count node-names)
          state (assoc state :seed seed)                     ;update seed in state
          indexed-partns (map-indexed (fn [index part] {:player-id (str "p" (inc index))
                                                        :partition part})
-                                     tile-name-partns)]
+                                     node-name-partns)]
      (reduce (fn [state {id         :player-id
-                         tile-names :partition}]
-               (add-tiles state id (map create-tile tile-names)))
+                         node-names :partition}]
+               (add-nodes state id (map create-node node-names)))
              state
              indexed-partns))))
 
 (defn create-game
   "Creates a starting game state."
   {:test (fn []
-           (is= (create-game 2 [{:tiles [(create-tile "Indonesia" :troop-count 10)
-                                         "New Guinea"]
+           (is= (create-game 2 [{:nodes [(create-node "i" :troop-count 10)
+                                         "ii"]
                                  :cards {:a 1 :b 2 :c 0}}
-                                {:tiles ["Eastern Australia" "Western Australia"]}]
+                                {:nodes ["iii" "iv"]}]
                              :initial-army-size 30)
-                {:player-in-turn            "p1"
-                 :turn-phase                 :card-exchange-phase
+                {:player-in-turn             "p1"
+                 :turn-phase                 :reinforcement-phase
                  :seed                       -9203025489357073502
                  :players                    {"p1" {:id    "p1"
-                                                 :cards {:a 1
-                                                         :b 2
-                                                         :c 0}}
+                                                    :cards {:a 1
+                                                            :b 2
+                                                            :c 0}}
                                               "p2" {:id    "p2"
-                                                 :cards {:a 0
-                                                         :b 0
-                                                         :c 0}}}
-                 :tiles                      {"Indonesia"         {:name        "Indonesia"
-                                                                   :owner-id    "p1"
-                                                                   :troop-count 10}
-                                              "New Guinea"        {:name        "New Guinea"
-                                                                   :owner-id    "p1"
-                                                                   :troop-count 1}
-                                              "Eastern Australia" {:name        "Eastern Australia"
-                                                                   :owner-id    "p2"
-                                                                   :troop-count 1}
-                                              "Western Australia" {:name        "Western Australia"
-                                                                   :owner-id    "p2"
-                                                                   :troop-count 1}}
+                                                    :cards {:a 0
+                                                            :b 0
+                                                            :c 0}}}
+                 :nodes                      {"i"   {:name        "i"
+                                                     :owner-id    "p1"
+                                                     :troop-count 10}
+                                              "ii"  {:name        "ii"
+                                                     :owner-id    "p1"
+                                                     :troop-count 1}
+                                              "iii" {:name        "iii"
+                                                     :owner-id    "p2"
+                                                     :troop-count 1}
+                                              "iv"  {:name        "iv"
+                                                     :owner-id    "p2"
+                                                     :troop-count 1}}
                  :initial-army-size          30
-                 :initial-reinforcement-size 5
-                 :initial-card-exchange-rate 4}))}
+                 :initial-reinforcement-size 3
+                 :initial-card-exchange-rate 0}))}
   ([num-players]
    {:pre [(>= num-players 2)]}
    (-> (create-empty-state num-players)
-       (randomly-assign-tiles)))
+       (randomly-assign-nodes)))
   ([num-players data & kvs]
    {:pre [(>= num-players 2) (vector? data)]}
    (let [players-data (map-indexed (fn [index player-data]
@@ -481,14 +490,14 @@
                                    data)
          state (as-> (create-game num-players) $
                      (reduce (fn [state {player-id :player-id
-                                         tiles     :tiles
+                                         nodes     :nodes
                                          cards     :cards}]
-                               (let [tiles (map (fn [tile]
-                                                  (if (string? tile)
-                                                    (create-tile tile :owner-id player-id)
-                                                    (assoc tile :owner-id player-id)))
-                                                tiles)]
-                                 (-> (replace-tiles state tiles)
+                               (let [nodes (map (fn [node]
+                                                  (if (string? node)
+                                                    (create-node node :owner-id player-id)
+                                                    (assoc node :owner-id player-id)))
+                                                nodes)]
+                                 (-> (replace-nodes state nodes)
                                      (add-cards player-id cards))))
                              $
                              players-data))]
@@ -496,54 +505,33 @@
        state
        (apply assoc state kvs)))))
 
-;; TODO make test not definition/map dependent.
-
-(defn get-tiles-from-names
-  "Given a tile name, returns the corresponding tile from the state."
-  {:test (fn []
-           (is= (-> (create-game 2 [{:tiles ["Indonesia"
-                                             "Western Australia"]}])
-                    (get-tiles-from-names ["Indonesia"
-                                           "Western Australia"]))
-                [{:name        "Indonesia"
-                  :owner-id    "p1"
-                  :troop-count 1}
-                 {:name        "Western Australia"
-                  :owner-id    "p1"
-                  :troop-count 1}]))}
-  [state names]
-  {:pre [(map? state) (vector? names) (every? string? names)]}
-  (map (fn [tile-name] (get-tile state tile-name))
-       names))
-
 (defn neighbors?
-  "Returns true if the two tiles are neighbors, false otherwise."
+  "Returns true if the two nodes are neighbors, false otherwise."
   {:test (fn []
-           (is (neighbors? "Indonesia"
-                           "New Guinea"))
-           (is-not (neighbors? "Indonesia"
-                               "Eastern Australia")))}
-  [tile-name-1 tile-name-2]
-  {:pre [(string? tile-name-1) (string? tile-name-2)]}
-  (->> (get-neighbor-names tile-name-1)
+           (is (neighbors? "i"
+                           "ii"))
+           (is-not (neighbors? "i"
+                               "iii")))}
+  [node-name-1 node-name-2]
+  {:pre [(string? node-name-1) (string? node-name-2)]}
+  (->> (neighbor-names node-name-1)
        (filter (fn [neighbor-name] (= neighbor-name
-                                      tile-name-2)))
+                                      node-name-2)))
        (first)
        (some?)))
 
 (defn owns-region?
   "Checks if a player owns a region."
   {:test (fn []
-           (not (-> (create-game 2)
-                    (owns-region? "p1" "Australia")))
-           (is (-> (create-game 2 [{:tiles ["Indonesia" "Western Australia"
-                                            "New Guinea" "Eastern Australia"]}])
-                   (owns-region? "p1" "Australia"))))}
+           (is-not (-> (create-game 2)
+                       (owns-region? "p1" "square")))
+           (is (-> (create-game 2 [{:nodes ["i" "ii" "iii" "iv"]}])
+                   (owns-region? "p1" "square"))))}
   [state player-id region-name]
   {:pre [(map? state) (string? player-id) (string? region-name)]}
   (->> (get-region-defn region-name)
-       (:tiles)
-       (get-tiles-from-names state)
+       (:member-nodes)
+       (map (fn [name] (get-node state name)))
        (map :owner-id)
        (filter (fn [owner-id] (not= owner-id
                                     player-id)))
@@ -554,11 +542,10 @@
   {:test (fn []
            (is= (-> (create-game 2)
                     (get-owned-regions "p1"))
-                ())
-           (is= (-> (create-game 2 [{:tiles ["Indonesia" "Western Australia"
-                                             "New Guinea" "Eastern Australia"]}])
+                [])
+           (is= (-> (create-game 2 [{:nodes ["i" "ii" "iii" "iv"]}])
                     (get-owned-regions "p1"))
-                ["Australia"]))}
+                ["square"]))}
   [state player-id]
   {:pre [(map? state) (string? player-id)]}
   (let [region-names (map :name (get-region-defns))]

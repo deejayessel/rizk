@@ -14,56 +14,46 @@
   "Returns all definitions in the game."
   {:test (fn []
            (is= (->> (get-all-definitions)
-                     (filter (fn [x] (or (= (:region x) "Australia")
-                                         (= (:name x) "Australia"))))
+                     (filter (fn [x] (or (= (:region x) "square")
+                                         (= (:name x) "square"))))
                      (set))
-                (set [{:name        "Indonesia"
-                       :entity-type :tile
-                       :neighbors   ["New Guinea"
-                                     "Western Australia"]
-                       :region      "Australia"}
+                (set [{:name        "i"
+                       :entity-type :node
+                       :neighbors   ["ii" "iv"]
+                       :region      "square"}
 
-                      {:name        "New Guinea"
-                       :entity-type :tile
-                       :neighbors   ["Indonesia"
-                                     "Western Australia"
-                                     "Eastern Australia"]
-                       :region      "Australia"}
+                      {:name        "ii"
+                       :entity-type :node
+                       :neighbors   ["i" "iii"]
+                       :region      "square"}
 
-                      {:name        "Western Australia"
-                       :entity-type :tile
-                       :neighbors   ["Indonesia"
-                                     "New Guinea"
-                                     "Eastern Australia"]
-                       :region      "Australia"}
+                      {:name        "iii"
+                       :entity-type :node
+                       :neighbors   ["ii" "iv"]
+                       :region      "square"}
 
-                      {:name        "Eastern Australia"
-                       :entity-type :tile
-                       :neighbors   ["New Guinea"
-                                     "Western Australia"]
-                       :region      "Australia"}
+                      {:name        "iv"
+                       :entity-type :node
+                       :neighbors   ["iii" "i"]
+                       :region      "square"}
 
-                      {:name         "Australia"
+                      {:name         "square"
                        :entity-type  :region
-                       :region-bonus 2
-                       :tiles        ["Indonesia"
-                                      "New Guinea"
-                                      "Western Australia"
-                                      "Eastern Australia"]}])))}
+                       :region-bonus 4
+                       :member-nodes ["i" "ii" "iii" "iv"]}])))}
   []
   (vals (deref definitions-atom)))
 
 (defn- get-definition
   {:test (fn []
-           (is= (get-definition "Eastern Australia")
-                {:name        "Eastern Australia"
-                 :entity-type :tile
-                 :neighbors   ["New Guinea"
-                               "Western Australia"]
-                 :region      "Australia"})
+           (is= (get-definition "iv")
+                {:name        "iv"
+                 :entity-type :node
+                 :neighbors   ["iii" "i"]
+                 :region      "square"})
            ; The name can be present in a map with :name as a key
-           (is= (get-definition {:name "Indonesia"})
-                (get-definition "Indonesia"))
+           (is= (get-definition {:name "i"})
+                (get-definition "i"))
 
            (error? (get-definition "Something that does not exist")))}
   [name-or-entity]
@@ -82,15 +72,17 @@
 (defn- get-entities-of-type
   {:test (fn []
            (is= (->> (get-entities-of-type :region)
+                     (filter (fn [n] (= (:name n) "square")))
                      (map :name))
-                ["Australia"])
-           (is= (->> (get-entities-of-type :tile)
+                ["square"])
+           (is= (->> (get-entities-of-type :node)
+                     (filter (fn [n] (= (:region n) "square")))
                      (map :name)
                      (set))
-                (set ["Indonesia"
-                      "New Guinea"
-                      "Western Australia"
-                      "Eastern Australia"])))}
+                (set ["i"
+                      "ii"
+                      "iii"
+                      "iv"])))}
   [entity-type]
   {:pre [(keyword? entity-type)]}
   (->> (get-all-definitions)
@@ -102,44 +94,43 @@
   {:test (fn []
            (is= (->> (get-region-defns)
                      (map :name))
-                ["Australia"]))}
+                ["square"]))}
   []
   (get-entities-of-type :region))
 
-(defn get-all-tile-defns
+(defn get-all-node-defns
   {:test (fn []
-           (is= (->> (get-all-tile-defns)
+           (is= (->> (get-all-node-defns)
                      (map :name)
                      (set))
-                (set ["Indonesia"
-                      "New Guinea"
-                      "Western Australia"
-                      "Eastern Australia"])))}
+                (set ["i"
+                      "ii"
+                      "iii"
+                      "iv"])))}
   []
-  (get-entities-of-type :tile))
+  (get-entities-of-type :node))
 
-(defn get-tile-defn
+(defn get-node-defn
   {:test (fn []
-           (is= (get-tile-defn "Eastern Australia")
-                {:name        "Eastern Australia"
-                 :entity-type :tile
-                 :neighbors   ["New Guinea"
-                               "Western Australia"]
-                 :region      "Australia"}))}
-  [tile-name]
-  {:pre [(string? tile-name)]}
-  (get-definition tile-name))
+           (is= (get-node-defn "i")
+                {:name        "i"
+                 :entity-type :node
+                 :neighbors   ["ii"
+                               "iv"]
+                 :region      "square"}))}
+  [node-name]
+  {:pre [(string? node-name)]}
+  (get-definition node-name))
 
 (defn get-region-defn
   "Returns the definition of a specified region. Throws an error if region is not found."
   {:test (fn []
-           (is= (get-region-defn "Australia")
-                {:name "Australia"
-                 :entity-type :region
-                 :region-bonus 2
-                 :tiles
-                 ["Indonesia" "New Guinea" "Western Australia" "Eastern Australia"]})
-           (error? (get-region-defn "Western Australia")))}
+           (is= (get-region-defn "square")
+                {:name         "square"
+                 :entity-type  :region
+                 :region-bonus 4
+                 :member-nodes ["i" "ii" "iii" "iv"]})
+           (error? (get-region-defn "iii")))}
   [region-name]
   {:pre [(string? region-name)]}
   (let [region-def (get-definition region-name)]

@@ -2,22 +2,19 @@
 Risk in Clojure
 
 ## Terms
-- Territory : a closed piece of land (e.g. Brazil).  Interchangeable with "tile".
-- Region : a collection of territories with a special bonus (e.g. South America, composed of Brazil, Argentina, Peru, etc.)
-- World : the collection of all territories in the game
+- Node : a territory in the map 
+- Cluster : a collection of territories with a special bonus (e.g. South America, composed of Brazil, Argentina, Peru, etc.)
 
 ## Gameplay
 ### Starting out
-At the start of the game, players are randomly assigned territories.  Given `n` players, each player gets `n/T` territories, where `T` is the total number of territories.
-Each player takes turns placing some fixed number (say, `troop-seed-count`) of troops in any collection of territories they own.
-Once all players have placed their troops (`initial-troop-count`), the game begins.
+Players are randomly assigned territories.  Territories are evenly distributed amongst the players -- the greatest gap
+in territory count between any two players is 1.  Each player takes turns placing `k` troops in any subset of territories
+that they own.  Once all players have exhausted their initial troop allotment, the game begins.
 
 ### Turns
-Players take turns.  A turn consists of the distribution phase, attack phase, and coordination phase.  
+A turn consists of 3 phases: (1) reinforcement, (2) attack, (3) movement.
 
-#### Distribution Phase
-At the start of their turn, a player may choose to trade in the cards (see below) in their hand for troops.  Once distribution has begun, a player may not trade in their cards.
-
+#### Reinforcement Phase
 Every player receives some number of troops at the start of their turn every round.
 The number of troops received is determined by
 
@@ -28,33 +25,20 @@ reinforcements = max { 3, ; minimum allotment
 A player must place all of these troops into territories that they own before they may move on to the attack phase. 
 
 #### Attack Phase
-During the attack phase, a player may move troops from any territory with 2 or more military units (MUs) to attack an adjacent territory owned by another player.  Players may not move MUs from one friendly territory to another at this time (this is done during the coordination phase).
+During the attack phase, a player may move troops from any territory with 2 or more units to attack an adjacent territory owned by another player.  Players may not move units from one friendly territory to another at this time (this is done during the coordination phase).
 
-Chances of success are calculated by a function (`attack-success-chance`).  In the board game,
+Combat proceeds as follows:
 - The attacker rolls `min { 3, num-troops-attacking }` dice.  
 - The defender rolls `min { 2, num-troops-defending }` dice.
 - The highest roll of the attacker is matched with the highest roll of the defender, and so on with the second-highest rolls for both.
   The highest roll in each pair wins; ties go to the defender.
-- The losing troops are removed from their respective tiles.
+- The losing troops are removed from their respective nodes.
 
-> An attack ends in one of three ways: 1) The attacker decides to end the attack, 2) the attacker runs out of troops with which to attack, and 3) the defender loses all troops.  In this third case, the attacker takes over the territory and must move at least as many troops as dice rolled in the winning roll and at most the number of remaining troops in the attacking territory minus the one troop that must stay behind to occupy the territory.  A player can attack as many territories as he or she wants during the attack phase of the turn. If the player captured at least one territory during the attack phase, he or she takes a ... card.
+The attacker may end the attack, run out of troops with which to attack, or kill all defending troops.  In this last case,
+the attacker conquers the territory and must move at least 1 troop into the node.
 
-Once a player is satisfied with their attack, they may move on to the coordination phase.  
-
-#### Coordination Phase
-During the coordination phase, a player may move their troops to locations within contiguous collections of territories, although this rule may be changed to alter gameplay.
-Once satisfied, the player may end their turn.
-
-### Cards
-Players have cards of three types: `A`, `B`, or `C`.  Players may hold up to 5 cards at a time.  Once a player has 5 cards, they *must* trade in their cards for troops.  Players may only trade in their cards at the start of their turn, before distributing troops.  Players trade in hands of 3 cards: a hand must have either one card of each type (i.e., `A-B-C`) or three cards of the same type (e.g. `A-A-A`).  Trading in gives the player additional troops to distribute, as determined by the card exchange rate.
-
-The exchange rate starts at some constant `initial-exchange-rate` and increases by a predetermined rule (e.g. up by 2's or by 20%) every time a player trades in their cards.
-
-Players receive cards at the end of their turn *if they have attacked and conquered at least one enemy territory*.
-If a player X wipes out a player Y, then X takes all of Y's cards.
-If taking Y's cards means that X has more than 5 cards in his hand, he must trade in immediately, regardless of which turn phase he is in.
-
-A player is wiped out from the game if they lose all of their territories.  We may choose to include revival mechanics if we wish.
+#### Movement Phase
+A player may move any number of troops to adjacent nodes.  Each troop may only move up to 1 node away.
 
 ### Region Bonuses
 Determined by the map.  Usually, regions which are large and less defensible have higher bonuses.
@@ -64,28 +48,37 @@ This means that a player must control a region for a full round before they can 
 Region bonuses scale throughout the course of the game.
 
 ## Interesting extensions
-- [ ] Fog of war and randomly generated maps.  Use graph cluster-detection algorithms to assign region bonuses.
-- [ ] Tile-relative resources/boosts.  Certain territories give additional bonus troops or enhance the fighting power of troops within a certain radius.
-- [ ] Economy management.  Each territory outputs a certain amount of $, and troops cost $ depending on how spread out / concentrated they are.  Combat penalties for going negative.
-- [ ] Random events.  Every few turns, some event occurs, modifying combat coefficients, reinforcement coefficients, or further game stats.
+- [ ] Fog of war
+- [ ] Randomly generated maps.  (Use graph cluster-detection algorithms to assign region bonuses.)
+- [ ] node-relative resources/boosts.  (Certain territories give additional bonus troops or enhance the fighting power of troops within a certain radius.)
+- [ ] Economy management.  (Each territory outputs a certain amount of $, and troops cost $ depending on how spread out / concentrated they are.  Combat penalties for going negative.)
+- [ ] Random events.  (Every few turns, some event occurs, modifying combat coefficients, reinforcement coefficients, or further game stats.)
 - [ ] Team play.
-- [ ] Special card effects.  Some cards modify the card exchange rate when played
 
 ## Notes
-- Changing the behavior of fns such as `attack-success-chance` can change gameplay to encourage more aggressive or defensive play.  Another interesting fn is `valid-troop-move?`: allowing players to move their troops more freely during the coordination phase can reward dynamic play.
 - Basic strategy: [http://web.mit.edu/sp.268/www/2010/risk.pdf](http://web.mit.edu/sp.268/www/2010/risk.pdf)
 
 # Sprints
 
 ## Sprint 1: Attack
 - [x] `attack-once`
-- [ ] `attack-until-exhausted`, `attack-until-k-exhausted`
-  - `attack-until-exhausted`: attack until either the attacker or the defender has 0 troops remaining in src/dst tiles
-  - `attack-until-k-exhausted`: attack until either `k` attacker troops are killed or the defending territory is captured, whichever happens first
+- [ ] `attack-k-times`
+- [ ] `attack-to-end`: attack until either the attacker or the defender has 0 troops remaining in src/dst nodes
+- [ ] `attack-with-k`: attack until either territory taken or `k` friendly troops dead
 - [ ] troop movement after attack completed
-  > In this third case, the attacker takes over the territory and must move at least as many troops as dice rolled in the winning roll and at most the number of remaining troops in the attacking territory minus the one troop that must stay behind to occupy the territory. 
 
-## Sprint 2: Card-trading
+## Sprint 2: Movement / Reinforcement
+- [ ] troop movement between nodes
+- [ ] reinforcing nodes with additional troops
+- [ ]
+
+## Sprint 4: Setup phase
+- set up the game by having players take turns seeding troops
+
+## Sprint 5: Game API
+- [ ] phase- and player-turn- transitions
+
+## Sprint X: Card-trading
 - [x] determine valid trades
 - [ ] determine card trade-in value (formula & impl)
   - trade-in value should go up by some rule:
@@ -94,15 +87,6 @@ Region bonuses scale throughout the course of the game.
     - increase at every turn?
     - set as some fraction of the total number of troops on the board?
 - [ ] when a player captures the last territory of another player (i.e., when a player removes another player from the game), the attacker takes the defender's cards
-
-## Sprint 3: Coordination phase
-- [ ] player allowed to move one group of as many troops as they like from one territory to another (bounded by the number of troops in the territory)
-
-## Sprint 4: Setup phase
-- set up the game by having players take turns seeding troops
-
-## Sprint 5: Game API
-- [ ] phase- and player-turn- transitions
 
 ## Miscellaneous
 - [ ] (Optional) better testing map (shorter names, simpler layout, easy to understand)

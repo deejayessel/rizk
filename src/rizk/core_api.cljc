@@ -6,15 +6,15 @@
                                        roll-n-dice]]
             [rizk.construct :refer [add-card
                                     create-game
-                                    create-tile
+                                    create-node
                                     get-cards
                                     get-owned-regions
-                                    get-player-id-in-turn
-                                    get-neighbor-names
-                                    get-tile
-                                    get-tiles
+                                    active-player-id
+                                    neighbor-names
+                                    get-node
+                                    get-nodes
                                     neighbors?
-                                    update-tile
+                                    update-node
                                     update-turn-phase]]
             [rizk.core :refer [can-draw-card?
                                valid-attack?]]))
@@ -58,28 +58,28 @@
                                  :attack-phase        :coordination-phase})))))
 
 (defn attack-once
-  "Attacks once from src-tile to dst-tile."
+  "Attacks once from src-node to dst-node."
   {:test (fn []
-           (let [state (-> (create-game 2 [{:tiles [(create-tile "Indonesia" :troop-count 5)]}
-                                           {:tiles [(create-tile "New Guinea" :troop-count 3)]}])
+           (let [state (-> (create-game 2 [{:nodes [(create-node "i" :troop-count 5)]}
+                                           {:nodes [(create-node "ii" :troop-count 3)]}])
                            (advance-to-next-phase)
-                           (attack-once "p1" "Indonesia" "New Guinea"))]
-             (is= (-> (get-tile state "Indonesia")
+                           (attack-once "p1" "i" "ii"))]
+             (is= (-> (get-node state "i")
                       (:troop-count))
                   4)
-             (is= (-> (get-tile state "New Guinea")
+             (is= (-> (get-node state "ii")
                       (:troop-count))
                   2)))}
   [state attacker-id src-name dst-name]
   {:pre [(map? state) (every? string? [attacker-id src-name dst-name])]}
   (if-not (valid-attack? state attacker-id src-name dst-name)
     (error "Invalid attack.")
-    (let [src-tile (get-tile state src-name)
-          dst-tile (get-tile state dst-name)
+    (let [src-node (get-node state src-name)
+          dst-node (get-node state dst-name)
 
           ; determine attacker/defender dice counts
-          attacker-dice-count (min 3 (:troop-count src-tile))
-          defender-dice-count (min 2 (:troop-count dst-tile))
+          attacker-dice-count (min 3 (:troop-count src-node))
+          defender-dice-count (min 2 (:troop-count dst-node))
 
           ; roll dice
           [state attacker-rolls] (roll-n-dice state attacker-dice-count)
@@ -95,5 +95,5 @@
                                   (count))
           defender-win-count (- 2 attacker-win-count)]
       (-> state
-          (update-tile dst-name :troop-count (fn [x] (- x attacker-win-count)))
-          (update-tile src-name :troop-count (fn [x] (- x defender-win-count)))))))
+          (update-node dst-name :troop-count (fn [x] (- x attacker-win-count)))
+          (update-node src-name :troop-count (fn [x] (- x defender-win-count)))))))

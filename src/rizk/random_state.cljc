@@ -2,7 +2,7 @@
   (:require [ysera.test :refer [is is-not is= error?]]
             [rizk.random :as random]
             [rizk.construct :refer [create-game
-                                    create-tile]]))
+                                    create-node]]))
 
 
 (defn roll-n-dice
