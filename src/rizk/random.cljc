@@ -72,11 +72,3 @@
               [new-seed (conj rolls roll)]))
           [seed []]
           (range 0 n)))
-
-(defn get-random-card
-  "Returns a random card type and new seed."
-  {:test (fn []
-           (is= (get-random-card 0)
-                [1 :a]))}
-  [seed]
-  (random-nth seed [:a :b :c]))

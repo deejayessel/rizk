@@ -2,12 +2,9 @@
   (:require [ysera.test :refer [is= is is-not error?]]
             [ysera.error :refer [error]]
             [rizk.util :refer [dec-by]]
-            [rizk.random-state :refer [get-random-card
-                                       roll-n-dice]]
-            [rizk.construct :refer [add-card
-                                    create-game
+            [rizk.random-state :refer [roll-n-dice]]
+            [rizk.construct :refer [create-game
                                     create-node
-                                    get-cards
                                     get-owned-regions
                                     active-player-id
                                     neighbor-names
@@ -16,8 +13,7 @@
                                     neighbors?
                                     update-node
                                     update-turn-phase]]
-            [rizk.core :refer [can-draw-card?
-                               valid-attack?]]))
+            [rizk.core :refer [valid-attack?]]))
 
 (defn go-to-next-phase
   "Moves on to the next turn phase."
@@ -84,3 +80,18 @@
       (-> state
           (update-node dst-name :troop-count (fn [x] (- x a-wins)))
           (update-node src-name :troop-count (fn [x] (- x d-wins)))))))
+
+(defn attack-k-times
+  "Attacks k times from the src-node tothe dst-node."
+  {:test (fn []
+           (let [state (-> (create-game 2 [{:nodes [(create-node "i" :troop-count 5)]}
+                                           {:nodes [(create-node "ii" :troop-count 3)]}])
+                           (go-to-next-phase)
+                           (attack-once "p1" "i" "ii"))]
+             (is= (-> (get-node state "i")
+                      (:troop-count))
+                  4)
+             (is= (-> (get-node state "ii")
+                      (:troop-count))
+                  2)))}
+  )

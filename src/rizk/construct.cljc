@@ -16,34 +16,41 @@
                 {:player-in-turn             "p1"
                  :turn-phase                 :reinforcement-phase
                  :seed                       0
-                 :players                    {"p1" {:id    "p1"
-                                                    :cards {:a 0
-                                                            :b 0
-                                                            :c 0}}
-                                              "p2" {:id    "p2"
-                                                    :cards {:a 0
-                                                            :b 0
-                                                            :c 0}}}
+                 :players                    ["p1" "p2"]
                  :nodes                      {}
                  :initial-army-size          20
-                 :initial-reinforcement-size 3
-                 :initial-card-exchange-rate 0}))}
+                 :initial-reinforcement-size 3}))}
   [num-players]
   {:pre [(int? num-players) (>= num-players 2)]}
   {:player-in-turn             "p1"
    :turn-phase                 :reinforcement-phase
    :seed                       0
    :players                    (->> (range 1 (inc num-players))
-                                    (map (fn [player-num]
-                                           {:id    (str "p" player-num)
-                                            :cards {:a 0 :b 0 :c 0}}))
-                                    (reduce (fn [map player]
-                                              (assoc map (:id player) player))
-                                            {}))
+                                    (map (fn [n] (str "p" n))))
    :nodes                      {}
    :initial-army-size          20
-   :initial-reinforcement-size 3
-   :initial-card-exchange-rate 0})
+   :initial-reinforcement-size 3})
+
+(defn create-node
+  "Creates a node without owner-id."
+  {:test (fn []
+           (is= (create-node "i")
+                {:name        "i"
+                 :troop-count 1})
+           (is= (create-node "i" :troop-count 2)
+                {:name        "i"
+                 :troop-count 2})
+           (error? (create-node "Williamstown")))}
+  [node-name & kvs]
+  (let [definition (get-node-defn node-name)
+        {troop-count :troop-count} kvs
+        node {:name        node-name
+              :troop-count (int-or-else troop-count 1)}]
+    (if (nil? definition)
+      (error "Couldn't get definition of " node-name ". Are definitions loaded?")
+      (if (empty? kvs)
+        node
+        (apply assoc node kvs)))))
 
 (defn update-turn-phase
   "Updates the turn phase."
@@ -71,30 +78,15 @@
   [state]
   (:player-in-turn state))
 
-(defn get-players
-  "Returns the players in the state."
+(defn players
+  "Returns the list of player names."
   {:test (fn []
            (is= (->> (create-empty-state 3)
-                     (get-players)
-                     (map :id))
+                     (players))
                 ["p1" "p2" "p3"]))}
   [state]
   {:pre [(map? state)]}
-  (-> (:players state)
-      (vals)))
-
-(defn get-player
-  "Returns the player whose id matches the input id."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (get-player "p2"))
-                {:id    "p2"
-                 :cards {:a 0
-                         :b 0
-                         :c 0}}))}
-  [state player-id]
-  {:pre [(map? state) (string? player-id)]}
-  (get-in state [:players player-id]))
+  (:players state))
 
 (defn player-count
   "Returns the number of players in the state."
@@ -104,7 +96,7 @@
                 3))}
   [state]
   {:pre [(map? state)]}
-  (count (get-players state)))
+  (count (players state)))
 
 (defn opponent-ids
   "Returns the ids of all opponents of the input player."
@@ -119,42 +111,8 @@
                  "p6" "p7" "p8" "p9"]))}
   [state player-id]
   {:pre [(map? state) (string? player-id)]}
-  (->> (get-players state)
-       (remove (fn [player] (= (:id player) player-id)))
-       (map :id)))
-
-(defn get-cards
-  "Returns the player's hand."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (get-cards "p1"))
-                {:a 0
-                 :b 0
-                 :c 0}))}
-  ([state player-id]
-   {:pre [(map? state) (string? player-id)]}
-   (get-in state [:players player-id :cards])))
-
-(defn create-node
-  "Creates a node without owner-id."
-  {:test (fn []
-           (is= (create-node "i")
-                {:name        "i"
-                 :troop-count 1})
-           (is= (create-node "i" :troop-count 2)
-                {:name        "i"
-                 :troop-count 2})
-           (error? (create-node "Williamstown")))}
-  [node-name & kvs]
-  (let [definition (get-node-defn node-name)
-        {troop-count :troop-count} kvs
-        node {:name        node-name
-              :troop-count (int-or-else troop-count 1)}]
-    (if (nil? definition)
-      (error "Couldn't get definition of " node-name ". Are definitions loaded?")
-      (if (empty? kvs)
-        node
-        (apply assoc node kvs)))))
+  (->> (players state)
+       (remove (fn [p] (= p player-id)))))
 
 (defn neighbor-names
   "Returns the names of all neighbors of the node with the given name."
@@ -326,74 +284,6 @@
                           (update node key fn-or-val)
                           (assoc node key fn-or-val)))))
 
-(defn add-card
-  "Adds a card to the specified player's hand."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (add-card "p1" :a)
-                    (get-cards "p1")
-                    (:a))
-                1))}
-  [state player-id card-type]
-  {:pre [(map? state) (string? player-id) (keyword? card-type)]}
-  (update-in state [:players player-id :cards card-type] inc))
-
-(defn- update-cards
-  "Adds or removes cards from the specified player's hand.
-  Guarantees that no player ends up with a negative number of cards."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (update-cards "p1" {:a 1 :b 2})
-                    (update-cards "p1" {:a 2 :b 0})
-                    (get-cards "p1"))
-                {:a 3 :b 2 :c 0})
-           (is= (-> (create-empty-state 3)
-                    (update-cards "p1" {:a 1 :b 2})
-                    (update-cards "p1" {:a -2 :b 1})
-                    (get-cards "p1"))
-                {:a 0 :b 3 :c 0}))}
-  [state player-id cards]
-  {:pre [(map? state) (string? player-id) (or (nil? cards) (map? cards))]}
-  (let [update-fn (fn [state card-type quantity]
-                    (if (contains? cards card-type)
-                      (update-in state
-                                 [:players player-id :cards card-type]
-                                 (fn [x] (max 0 (+ x quantity))))
-                      state))]
-    (reduce-kv update-fn state cards)))
-
-(defn add-cards
-  "Adds cards to a player's hand."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (add-cards "p1" {:a 1 :b 2})
-                    (add-cards "p1" {:a 2 :b 0})
-                    (get-cards "p1"))
-                {:a 3 :b 2 :c 0}))}
-  [state player-id cards]
-  {:pre [(map? state) (string? player-id) (or (nil? cards) (map? cards))]}
-  (update-cards state player-id cards))
-
-(defn remove-cards
-  "Removes multiple cards from the player's hand."
-  {:test (fn []
-           (is= (-> (create-empty-state 3)
-                    (add-cards "p1" {:a 1 :b 2})
-                    (remove-cards "p1" {:a 1 :b 1})
-                    (get-cards "p1"))
-                {:a 0 :b 1 :c 0})
-           (is= (-> (create-empty-state 3)
-                    (add-cards "p1" {:a 1})
-                    (remove-cards "p1" {:b 1})
-                    (get-cards "p1"))
-                {:a 1 :b 0 :c 0}))}
-  [state player-id cards]
-  {:pre [(map? state) (string? player-id) (or (nil? cards) (map? cards))]}
-  (let [neg-cards (reduce (fn [cards card-type] (update cards card-type -))
-                          cards
-                          (keys cards))]
-    (update-cards state player-id neg-cards)))
-
 (defn randomly-assign-nodes
   "Randomly assigns nodes to the players in the game.
   Each assigned territory has 1 troop present.
@@ -429,7 +319,9 @@
                 ["i" "ii"]))}
   ([state]
    {:pre [(map? state)]}
-   (randomly-assign-nodes state (map :name (get-all-node-defns))))
+   (->> (get-all-node-defns)
+        (map :name)
+        (randomly-assign-nodes state)))
   ([state node-names]
    {:pre [(map? state) (every? string? node-names)]}
    (let [seed (:seed state)
@@ -449,21 +341,13 @@
   "Creates a starting game state."
   {:test (fn []
            (is= (create-game 2 [{:nodes [(create-node "i" :troop-count 10)
-                                         "ii"]
-                                 :cards {:a 1 :b 2 :c 0}}
+                                         "ii"]}
                                 {:nodes ["iii" "iv"]}]
                              :initial-army-size 30)
                 {:player-in-turn             "p1"
                  :turn-phase                 :reinforcement-phase
                  :seed                       -9203025489357073502
-                 :players                    {"p1" {:id    "p1"
-                                                    :cards {:a 1
-                                                            :b 2
-                                                            :c 0}}
-                                              "p2" {:id    "p2"
-                                                    :cards {:a 0
-                                                            :b 0
-                                                            :c 0}}}
+                 :players                    ["p1" "p2"]
                  :nodes                      {"i"   {:name        "i"
                                                      :owner-id    "p1"
                                                      :troop-count 10}
@@ -477,8 +361,7 @@
                                                      :owner-id    "p2"
                                                      :troop-count 1}}
                  :initial-army-size          30
-                 :initial-reinforcement-size 3
-                 :initial-card-exchange-rate 0}))}
+                 :initial-reinforcement-size 3}))}
   ([num-players]
    {:pre [(>= num-players 2)]}
    (-> (create-empty-state num-players)
@@ -490,15 +373,13 @@
                                    data)
          state (as-> (create-game num-players) $
                      (reduce (fn [state {player-id :player-id
-                                         nodes     :nodes
-                                         cards     :cards}]
+                                         nodes     :nodes}]
                                (let [nodes (map (fn [node]
                                                   (if (string? node)
                                                     (create-node node :owner-id player-id)
                                                     (assoc node :owner-id player-id)))
                                                 nodes)]
-                                 (-> (replace-nodes state nodes)
-                                     (add-cards player-id cards))))
+                                 (replace-nodes state nodes)))
                              $
                              players-data))]
      (if (empty? kvs)
