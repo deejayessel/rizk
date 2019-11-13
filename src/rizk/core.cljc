@@ -10,59 +10,19 @@
                                     create-game
                                     create-node
                                     get-owned-regions
-                                    neighbor-names
                                     get-node
                                     get-nodes
+                                    neighbor-names
                                     neighbors?]]))
-
-(defn can-draw-card?
-  "Determines whether a player can draw a card."
-  {:test (fn []
-           ; player must be in turn
-           (is-not (-> (create-game 2)
-                       (can-draw-card? "p2")))
-           ; player must be in card-exchange phase
-           (is-not (-> (create-game 2 [] :turn-phase :attack-phase)
-                       (can-draw-card? "p1")))
-           ; player can draw card
-           (is (-> (create-game 2 [] :turn-phase :card-exchange-phase)
-                   (can-draw-card? "p1"))))}
-  [state player-id]
-  {:pre [(map? state) (string? player-id)]}
-  (and (= (active-player-id state)
-          player-id)
-       (= (:turn-phase state)
-          :card-exchange-phase)))
-
-(defn valid-hand?
-  "Checks if a set of cards forms a valid trade.  Players trade in hands of 3 cards:
-   a hand must have either one card of each type (i.e., `A-B-C`) or three cards of
-   the same type (e.g. `A-A-A`)"
-  {:test (fn []
-           (is (valid-hand? {:a 1 :b 1 :c 1}))
-           (is (valid-hand? {:a 3 :b 0 :c 0}))
-           (is-not (valid-hand? {:a 2 :b 1 :c 1})))}
-  [{a :a b :b c :c}]
-  {:pre [(non-neg-int? a) (non-neg-int? b) (non-neg-int? c)]}
-  (and (= (+ a b c) 3)
-       (or (= a 3)
-           (= b 3)
-           (= c 3)
-           (and (= a 1) (= b 1) (= c 1)))))
 
 (defn get-player-region-bonuses
   "Returns the total region bonuses the player has."
   {:test (fn []
-           (is= (-> (create-game 2 [{:nodes ["i"
-                                             "iii"]}
-                                    {:nodes ["ii"
-                                             "iii"]}])
+           (is= (-> (create-game 2 [{:nodes ["i" "iii"]}
+                                    {:nodes ["ii" "iii"]}])
                     (get-player-region-bonuses "p1"))
                 0)
-           (is= (-> (create-game 2 [{:nodes ["i"
-                                             "ii"
-                                             "iii"
-                                             "iv"]}])
+           (is= (-> (create-game 2 [{:nodes ["i" "ii" "iii" "iv"]}])
                     (get-player-region-bonuses "p1"))
                 4))}
   [state player-id]
@@ -125,8 +85,7 @@
                        (valid-attack? "p1" "i" "ii")))
 
            ; Valid attack
-           (is (-> (create-game 2 [{:nodes [(create-node "i"
-                                                         :troop-count 10)
+           (is (-> (create-game 2 [{:nodes [(create-node "i" :troop-count 10)
                                             "iii"]}
                                    {:nodes ["ii" "iii"]}]
                                 :turn-phase :attack-phase)

@@ -19,23 +19,6 @@
             [rizk.core :refer [can-draw-card?
                                valid-attack?]]))
 
-(defn draw-card
-  "Draw a card for the player."
-  {:test (fn []
-           (error? (-> (create-game 2)
-                       (draw-card "p2")))
-           (is= (-> (create-game 2 [] :turn-phase :card-exchange-phase)
-                    (draw-card "p1")
-                    (get-cards "p1")
-                    (:b))
-                1))}
-  [state player-id]
-  {:pre [(map? state) (string? player-id)]}
-  (if-not (can-draw-card? state player-id)
-    (error "Cannot draw card.")
-    (let [[state card-type] (get-random-card state)]
-      (add-card state player-id card-type))))
-
 (defn go-to-next-phase
   "Moves on to the next turn phase."
   {:test (fn []
