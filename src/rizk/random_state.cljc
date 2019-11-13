@@ -1,8 +1,11 @@
 (ns rizk.random-state
   (:require [ysera.test :refer [is is-not is= error?]]
+            [ysera.random :refer [get-random-int
+                                  random-nth
+                                  shuffle-with-seed]]
             [rizk.random :as random]
             [rizk.construct :refer [create-game
-                                    create-node]]))
+                                    create-tile]]))
 
 
 (defn roll-n-dice
@@ -19,3 +22,17 @@
   (let [[seed roll] (random/roll-n-dice (:seed state) n)
         state (assoc state :seed seed)]
     [state roll]))
+
+(defn random-int
+  {:test (fn []
+           (let [state (create-game 2)
+                 seed (:seed state)
+                 [state n] (random-int state 10)]
+             ; check int
+             (is= n 8)
+             ; check seed updated in state
+             (is (not= (:seed state) seed))))}
+  [state max]
+  (let [[seed n] (get-random-int (:seed state) max)
+        state (assoc state :seed seed)]
+    [state n]))

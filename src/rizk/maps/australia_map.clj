@@ -5,39 +5,39 @@
 
   {"Indonesia"
    {:name        "Indonesia"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["New Guinea"
                   "Western Australia"]
-    :region      "Australia"}
+    :group      "Australia"}
 
    "New Guinea"
    {:name        "New Guinea"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["Indonesia"
                   "Western Australia"
                   "Eastern Australia"]
-    :region      "Australia"}
+    :group      "Australia"}
 
    "Western Australia"
    {:name        "Western Australia"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["Indonesia"
                   "New Guinea"
                   "Eastern Australia"]
-    :region      "Australia"}
+    :group      "Australia"}
 
    "Eastern Australia"
    {:name        "Eastern Australia"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["New Guinea"
                   "Western Australia"]
-    :region      "Australia"}
+    :group      "Australia"}
 
    "Australia"
    {:name         "Australia"
-    :entity-type  :region
-    :region-bonus 2
-    :member-nodes ["Indonesia"
+    :entity-type  :group
+    :group-bonus 2
+    :member-tiles ["Indonesia"
                    "New Guinea"
                    "Western Australia"
                    "Eastern Australia"]}})

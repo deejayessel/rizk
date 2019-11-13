@@ -2,8 +2,8 @@
 Risk in Clojure
 
 ## Terms
-- Node : a territory in the map 
-- Cluster : a collection of territories with a special bonus (e.g. South America, composed of Brazil, Argentina, Peru, etc.)
+- Tile : a node in the graph/map
+- Group : a collection of territories with a special bonus
 
 ## Gameplay
 ### Starting out

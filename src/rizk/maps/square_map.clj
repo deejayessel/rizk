@@ -1,38 +1,38 @@
 (ns rizk.maps.square-map
   (:require [rizk.definitions :as definitions]))
 
-;; A simple cycle of 4 nodes
+;; A simple cycle of 4 tiles
 (def square-map-definition
 
   {"i"
    {:name        "i"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["ii" "iv"]
-    :region      "square"}
+    :group      "square"}
 
    "ii"
    {:name        "ii"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["i" "iii"]
-    :region      "square"}
+    :group      "square"}
 
    "iii"
    {:name        "iii"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["ii" "iv"]
-    :region      "square"}
+    :group      "square"}
 
    "iv"
    {:name        "iv"
-    :entity-type :node
+    :entity-type :tile
     :neighbors   ["iii" "i"]
-    :region      "square"}
+    :group      "square"}
 
    "square"
    {:name         "square"
-    :entity-type  :region
-    :region-bonus 4
-    :member-nodes ["i" "ii" "iii" "iv"]}})
+    :entity-type  :group
+    :group-bonus 4
+    :member-tiles ["i" "ii" "iii" "iv"]}})
 
 (definitions/add-definitions! square-map-definition)
 

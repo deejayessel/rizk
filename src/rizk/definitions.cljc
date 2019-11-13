@@ -14,33 +14,33 @@
   "Returns all definitions in the game."
   {:test (fn []
            (is= (->> (get-all-definitions)
-                     (filter (fn [x] (or (= (:region x) "square")
+                     (filter (fn [x] (or (= (:group x) "square")
                                          (= (:name x) "square"))))
                      (set))
                 (set [{:name        "i"
-                       :entity-type :node
+                       :entity-type :tile
                        :neighbors   ["ii" "iv"]
-                       :region      "square"}
+                       :group      "square"}
 
                       {:name        "ii"
-                       :entity-type :node
+                       :entity-type :tile
                        :neighbors   ["i" "iii"]
-                       :region      "square"}
+                       :group      "square"}
 
                       {:name        "iii"
-                       :entity-type :node
+                       :entity-type :tile
                        :neighbors   ["ii" "iv"]
-                       :region      "square"}
+                       :group      "square"}
 
                       {:name        "iv"
-                       :entity-type :node
+                       :entity-type :tile
                        :neighbors   ["iii" "i"]
-                       :region      "square"}
+                       :group      "square"}
 
-                      {:name         "square"
-                       :entity-type  :region
-                       :region-bonus 4
-                       :member-nodes ["i" "ii" "iii" "iv"]}])))}
+                      {:name               "square"
+                       :entity-type        :group
+                       :group-bonus       4
+                       :member-tiles ["i" "ii" "iii" "iv"]}])))}
   []
   (vals (deref definitions-atom)))
 
@@ -48,9 +48,9 @@
   {:test (fn []
            (is= (get-definition "iv")
                 {:name        "iv"
-                 :entity-type :node
+                 :entity-type :tile
                  :neighbors   ["iii" "i"]
-                 :region      "square"})
+                 :group      "square"})
            ; The name can be present in a map with :name as a key
            (is= (get-definition {:name "i"})
                 (get-definition "i"))
@@ -71,12 +71,12 @@
 
 (defn- get-entities-of-type
   {:test (fn []
-           (is= (->> (get-entities-of-type :region)
+           (is= (->> (get-entities-of-type :group)
                      (filter (fn [n] (= (:name n) "square")))
                      (map :name))
                 ["square"])
-           (is= (->> (get-entities-of-type :node)
-                     (filter (fn [n] (= (:region n) "square")))
+           (is= (->> (get-entities-of-type :tile)
+                     (filter (fn [n] (= (:group n) "square")))
                      (map :name)
                      (set))
                 (set ["i"
@@ -90,17 +90,17 @@
                  (= (:entity-type entity)
                     entity-type)))))
 
-(defn get-region-defns
+(defn get-group-defns
   {:test (fn []
-           (is= (->> (get-region-defns)
+           (is= (->> (get-group-defns)
                      (map :name))
                 ["square"]))}
   []
-  (get-entities-of-type :region))
+  (get-entities-of-type :group))
 
-(defn get-all-node-defns
+(defn get-all-tile-defns
   {:test (fn []
-           (is= (->> (get-all-node-defns)
+           (is= (->> (get-all-tile-defns)
                      (map :name)
                      (set))
                 (set ["i"
@@ -108,32 +108,32 @@
                       "iii"
                       "iv"])))}
   []
-  (get-entities-of-type :node))
+  (get-entities-of-type :tile))
 
-(defn get-node-defn
+(defn get-tile-defn
   {:test (fn []
-           (is= (get-node-defn "i")
+           (is= (get-tile-defn "i")
                 {:name        "i"
-                 :entity-type :node
+                 :entity-type :tile
                  :neighbors   ["ii"
                                "iv"]
-                 :region      "square"}))}
-  [node-name]
-  {:pre [(string? node-name)]}
-  (get-definition node-name))
+                 :group      "square"}))}
+  [tile-name]
+  {:pre [(string? tile-name)]}
+  (get-definition tile-name))
 
-(defn get-region-defn
-  "Returns the definition of a specified region. Throws an error if region is not found."
+(defn get-group-defn
+  "Returns the definition of a specified group. Throws an error if group is not found."
   {:test (fn []
-           (is= (get-region-defn "square")
-                {:name         "square"
-                 :entity-type  :region
-                 :region-bonus 4
-                 :member-nodes ["i" "ii" "iii" "iv"]})
-           (error? (get-region-defn "iii")))}
-  [region-name]
-  {:pre [(string? region-name)]}
-  (let [region-def (get-definition region-name)]
-    (if (or (empty? region-def) (not= (:entity-type region-def) :region))
-      (error (str "Unable to find region: " region-name "."))
-      region-def)))
+           (is= (get-group-defn "square")
+                {:name               "square"
+                 :entity-type        :group
+                 :group-bonus       4
+                 :member-tiles ["i" "ii" "iii" "iv"]})
+           (error? (get-group-defn "iii")))}
+  [group-name]
+  {:pre [(string? group-name)]}
+  (let [group-def (get-definition group-name)]
+    (if (or (empty? group-def) (not= (:entity-type group-def) :group))
+      (error (str "Unable to find group: " group-name "."))
+      group-def)))

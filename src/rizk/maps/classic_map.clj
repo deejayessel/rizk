@@ -6,7 +6,7 @@
    {:name      "Alaska"
     :neighbors ["Northwest Territory"
                 "Alberta"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Northwest Territory"
    {:name      "Northwest Territory"
@@ -14,14 +14,14 @@
                 "Greenland"
                 "Alberta"
                 "Ontario"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Greenland"
    {:name      "Greenland"
     :neighbors ["Northwest Territory"
                 "Ontario"
                 "Quebec"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Alberta"
    {:name      "Alberta"
@@ -29,7 +29,7 @@
                 "Northwest Territory"
                 "Ontario"
                 "Western United States"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Ontario"
    {:name      "Ontario"
@@ -39,14 +39,14 @@
                 "Quebec"
                 "Western United States"
                 "Eastern United States"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Quebec"
    {:name      "Quebec"
     :neighbors ["Greenland"
                 "Ontario"
                 "Eastern United States"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Western United States"
    {:name      "Western United States"
@@ -54,7 +54,7 @@
                 "Ontario"
                 "Eastern United States"
                 "Central America"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Eastern United States"
    {:name      "Eastern United States"
@@ -62,13 +62,13 @@
                 "Ontario"
                 "Western United States"
                 "Central America"]
-    :region    "North America"}
+    :group    "North America"}
 
    "Central America"
    {:name      "Central America"
     :neighbors ["Eastern United States"
                 "Western United States"]
-    :region    "North America"}
+    :group    "North America"}
 
 
 
