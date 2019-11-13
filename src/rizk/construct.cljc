@@ -114,26 +114,6 @@
   (->> (players state)
        (remove (fn [p] (= p player-id)))))
 
-(defn neighbor-names
-  "Returns the names of all neighbors of the node with the given name."
-  {:test (fn []
-           (is= (neighbor-names "i")
-                ["ii" "iv"]))}
-  [node-name]
-  {:pre [(string? node-name)]}
-  (let [node-defn (get-node-defn node-name)]
-    (:neighbors node-defn)))
-
-(defn containing-region-name
-  "Returns the name of the region containing the input node."
-  {:test (fn []
-           (is= (containing-region-name "i")
-                "square"))}
-  [node-name]
-  {:pre [(string? node-name)]}
-  (let [node-defn (get-node-defn node-name)]
-    (:region node-defn)))
-
 (defn get-nodes
   "Returns all nodes in the state or, optionally,
   in a given player's possession."
@@ -169,6 +149,24 @@
   (assoc-in state [:nodes (:name node)]
             (assoc node :owner-id player-id)))
 
+(defn add-nodes
+  "Adds a collection of nodes to the state."
+  {:test (fn []
+           (let [state (-> (create-empty-state 3)
+                           (add-nodes "p1" [(create-node "i")
+                                            (create-node "ii")]))
+                 nodes (get-nodes state)]
+             (is= (map :owner-id nodes)
+                  ["p1" "p1"])
+             (is= (map :name nodes)
+                  ["i" "ii"])))}
+  [state owner-id nodes]
+  {:pre [(map? state) (string? owner-id) (every? map? nodes)]}
+  (reduce (fn [state node]
+            (add-node state owner-id node))
+          state
+          nodes))
+
 (defn get-node
   "Returns the node in the state identified by node-name."
   {:test (fn []
@@ -192,24 +190,6 @@
   [state node-name key]
   {:pre [(map? state) (string? node-name) (keyword? key)]}
   (get-in state [:nodes node-name key]))
-
-(defn add-nodes
-  "Adds a collection of nodes to the state."
-  {:test (fn []
-           (let [state (-> (create-empty-state 3)
-                           (add-nodes "p1" [(create-node "i")
-                                            (create-node "ii")]))
-                 nodes (get-nodes state)]
-             (is= (map :owner-id nodes)
-                  ["p1" "p1"])
-             (is= (map :name nodes)
-                  ["i" "ii"])))}
-  [state owner-id nodes]
-  {:pre [(map? state) (string? owner-id) (every? map? nodes)]}
-  (reduce (fn [state node]
-            (add-node state owner-id node))
-          state
-          nodes))
 
 (defn replace-node
   "Adds new-node into the state, removing any other node that shares the same name."
@@ -386,6 +366,16 @@
        state
        (apply assoc state kvs)))))
 
+(defn neighbor-names
+  "Returns the names of all neighbors of the node with the given name."
+  {:test (fn []
+           (is= (neighbor-names "i")
+                ["ii" "iv"]))}
+  [node-name]
+  {:pre [(string? node-name)]}
+  (let [node-defn (get-node-defn node-name)]
+    (:neighbors node-defn)))
+
 (defn neighbors?
   "Returns true if the two nodes are neighbors, false otherwise."
   {:test (fn []
@@ -393,11 +383,10 @@
                            "ii"))
            (is-not (neighbors? "i"
                                "iii")))}
-  [node-name-1 node-name-2]
-  {:pre [(string? node-name-1) (string? node-name-2)]}
-  (->> (neighbor-names node-name-1)
-       (filter (fn [neighbor-name] (= neighbor-name
-                                      node-name-2)))
+  [node-1-name node-2-name]
+  {:pre [(string? node-1-name) (string? node-2-name)]}
+  (->> (neighbor-names node-1-name)
+       (filter (fn [n] (= n node-2-name)))
        (first)
        (some?)))
 
