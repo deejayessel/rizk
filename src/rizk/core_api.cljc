@@ -24,7 +24,7 @@
   {:test (fn []
            (error? (-> (create-game 2)
                        (draw-card "p2")))
-           (is= (-> (create-game 2)
+           (is= (-> (create-game 2 [] :turn-phase :card-exchange-phase)
                     (draw-card "p1")
                     (get-cards "p1")
                     (:b))
@@ -36,33 +36,37 @@
     (let [[state card-type] (get-random-card state)]
       (add-card state player-id card-type))))
 
-(defn advance-to-next-phase
+(defn go-to-next-phase
   "Moves on to the next turn phase."
   {:test (fn []
            (is= (-> (create-game 2)
-                    (advance-to-next-phase)
+                    (go-to-next-phase)
                     (:turn-phase))
                 :attack-phase)
            (is= (-> (create-game 2)
-                    (advance-to-next-phase)
-                    (advance-to-next-phase)
+                    (go-to-next-phase)
+                    (go-to-next-phase)
                     (:turn-phase))
-                :coordination-phase))}
+                :movement-phase)
+           (error? (-> (create-game 2)
+                       (go-to-next-phase)
+                       (go-to-next-phase)
+                       (go-to-next-phase))))}
   [state]
   {:pre [(map? state)]}
   (update-turn-phase state
                      (fn [phase]
-                       (if (= phase :coordination-phase)
-                         (error "Tried to advance past coordination phase")
-                         (phase {:card-exchange-phase :attack-phase
-                                 :attack-phase        :coordination-phase})))))
+                       (if (= phase :movement-phase)
+                         (error "Tried to advance past movement phase")
+                         (phase {:reinforcement-phase :attack-phase
+                                 :attack-phase        :movement-phase})))))
 
 (defn attack-once
   "Attacks once from src-node to dst-node."
   {:test (fn []
            (let [state (-> (create-game 2 [{:nodes [(create-node "i" :troop-count 5)]}
                                            {:nodes [(create-node "ii" :troop-count 3)]}])
-                           (advance-to-next-phase)
+                           (go-to-next-phase)
                            (attack-once "p1" "i" "ii"))]
              (is= (-> (get-node state "i")
                       (:troop-count))
@@ -78,22 +82,22 @@
           dst-node (get-node state dst-name)
 
           ; determine attacker/defender dice counts
-          attacker-dice-count (min 3 (:troop-count src-node))
-          defender-dice-count (min 2 (:troop-count dst-node))
+          a-dice (min 3 (:troop-count src-node))
+          d-dice (min 2 (:troop-count dst-node))
 
           ; roll dice
-          [state attacker-rolls] (roll-n-dice state attacker-dice-count)
-          [state defender-rolls] (roll-n-dice state defender-dice-count)
+          [state as] (roll-n-dice state a-dice)
+          [state ds] (roll-n-dice state d-dice)
 
           ; sort decreasing
-          attacker-rolls (take 2 (sort (comp - compare) attacker-rolls))
-          defender-rolls (sort (comp - compare) defender-rolls)
+          as (take 2 (sort (comp - compare) as))
+          ds (sort (comp - compare) ds)
 
-          attacker-win-count (->> (map vector attacker-rolls defender-rolls) ; zip
-                                  (filter (fn [[attacker-roll defender-roll]]
-                                            (> attacker-roll defender-roll))) ;; ties go to defender
+          a-wins (->> (map vector as ds) ; zip
+                                  (filter (fn [[a d]]
+                                            (> a d))) ;; ties go to defender
                                   (count))
-          defender-win-count (- 2 attacker-win-count)]
+          d-wins (- 2 a-wins)]
       (-> state
-          (update-node dst-name :troop-count (fn [x] (- x attacker-win-count)))
-          (update-node src-name :troop-count (fn [x] (- x defender-win-count)))))))
+          (update-node dst-name :troop-count (fn [x] (- x a-wins)))
+          (update-node src-name :troop-count (fn [x] (- x d-wins)))))))
