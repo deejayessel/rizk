@@ -15,9 +15,9 @@
                                     get-owned-groups
                                     get-tile
                                     get-tiles
+                                    get-troop-count
                                     neighbor-names
                                     neighbors?
-                                    troop-count
                                     update-tile]]))
 
 (defn player-reinforcement-bonus
@@ -36,7 +36,7 @@
        (map (fn [g] (get-in-defn g :group-bonus)))
        (apply +)))
 
-(defn reinforcement-count
+(defn get-reinforcement-count
   "Determines the number of reinforcements a given player receives on their turn.
 
    Each player receives a minimum of 3 troops.  Otherwise, their reinforcement count
@@ -45,10 +45,10 @@
   {:test (fn []
            (is= (-> (create-game 2 [{:tiles ["i" "ii"]}
                                     {:tiles ["iii" "iv"]}])
-                    (reinforcement-count "p1"))
+                    (get-reinforcement-count "p1"))
                 3)
            (is= (-> (create-game 2 [{:tiles ["i" "ii" "iii" "iv"]}])
-                    (reinforcement-count "p1"))
+                    (get-reinforcement-count "p1"))
                 7))}
   [state player-id]
   {:pre [(map? state) (string? player-id)]}
@@ -117,13 +117,13 @@
                            (conquer-tile "i" "ii"))]
              (is= (get-in-tile state "ii" :owner-id)
                   "p1")
-             (is= (troop-count state "i")
+             (is= (get-troop-count state "i")
                   1)
-             (is= (troop-count state "ii")
+             (is= (get-troop-count state "ii")
                   1)))}
   [state src-name dst-name]
-  {:pre [(>= (troop-count state src-name) 2)
-         (= (troop-count state dst-name) 0)]}
+  {:pre [(>= (get-troop-count state src-name) 2)
+         (= (get-troop-count state dst-name) 0)]}
   (let [src-owner-id (get-in-tile state src-name :owner-id)]
     (-> state
         (update-tile src-name :troop-count dec)
@@ -140,7 +140,7 @@
                                            {:tiles [(create-tile "ii" :troop-count 3)]}]
                                         :turn-phase :attack-phase)
                            (attack-once "i" "ii"))]
-             (is= (map (fn [n] (troop-count state n))
+             (is= (map (fn [n] (get-troop-count state n))
                        ["i" "ii"])
                   [3 2]))
            ; Test conquering tile
@@ -148,7 +148,7 @@
                                            {:tiles [(create-tile "ii" :troop-count 1)]}]
                                         :turn-phase :attack-phase)
                            (attack-once "i" "ii"))]
-             (is= (map (fn [n] (troop-count state n))
+             (is= (map (fn [n] (get-troop-count state n))
                        ["i" "ii"])
                   [1 1])
              (is= (get-in-tile state "ii" :owner-id)
@@ -161,7 +161,7 @@
           state (if (< n 1)
                   (update-tile state dst-name :troop-count dec)
                   (update-tile state src-name :troop-count dec))]
-      (if-not (zero? (troop-count state dst-name))
+      (if-not (zero? (get-troop-count state dst-name))
         state
         (conquer-tile state src-name dst-name)))))
 
@@ -229,7 +229,7 @@
   1. src and dst belong to the same player.
   2. src owner is in turn.
   3. turn is in movement phase
-  3. src and dst have at least one troop remaining at the end of the move."
+  4. src and dst have at least one troop remaining at the end of the move."
   ;TODO track troop movements to prevent units from moving more than 1
   ; territory every turn
   {:test (fn []
@@ -246,21 +246,69 @@
             (active-player-id state))
          (= (:turn-phase state)
             :movement-phase)
-         (pos-int? (- (troop-count state src-name)
+         (pos-int? (- (get-troop-count state src-name)
                       troop-quantity)))))
 
 (defn move-k-troops
   "Moves k troops from src to dst."
   {:test (fn []
+           ; Valid move
            (let [state (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 5)
                                                     "ii"]}]
                                         :turn-phase :movement-phase)
                            (move-k-troops "i" "ii" 3))]
-             (is= (troop-count state "i") 2)
-             (is= (troop-count state "ii") 4)))}
+             (is= (get-troop-count state "i") 2)
+             (is= (get-troop-count state "ii") 4))
+           ; Cannot move troops to unowned territory
+           (error? (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 3)
+                                                "ii"]}
+                                       {:tiles ["iii" "iv"]}])
+                       (move-k-troops "i" "iii" 1)))
+           ; Cannot move more troops than in src
+           (error? (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 3)
+                                                "ii"]}])
+                       (move-k-troops "i" "ii" 10))))}
   [state src-name dst-name k]
   (if-not (valid-move? state src-name dst-name k)
     (error "Invalid move")
     (-> state
         (update-tile src-name :troop-count (fn [t] (- t k)))
         (update-tile dst-name :troop-count (fn [t] (+ t k))))))
+
+(defn valid-reinforcement?
+  "Determines whether a reinforcement is valid."
+  ;TODO track total reinforcements in a turn
+  {:test (fn []
+           ; Tile owner must be in turn
+           (is-not (-> (create-game 2 [{} {:tiles ["i"]}]
+                                    :turn-phase :reinforcement-phase)
+                       (valid-reinforcement? "i" 1)))
+           ; Turn must be in reinforcement phase
+           (is-not (-> (create-game 2 [{:tiles ["i"]}]
+                                    :turn-phase :attack-phase)
+                       (valid-reinforcement? "i" 1)))
+           ; Valid reinforcement
+           (is (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 2)]}]
+                                :turn-phase :reinforcement-phase)
+                   (valid-reinforcement? "i" 1))))}
+  [state tile-name troop-quantity]
+  {:pre [(map? state) (string? tile-name) (pos-int? troop-quantity)]}
+  (let [tile (get-tile state tile-name)]
+    (and (= (:owner-id tile)
+            (active-player-id state))
+         (= (:turn-phase state)
+            :reinforcement-phase))))
+
+(defn reinforce-tile
+  "Adds troops to a tile."
+  {:test (fn []
+           (is= (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 1)]}]
+                                 :turn-phase :reinforcement-phase)
+                    (reinforce-tile "i" 10)
+                    (get-troop-count "i"))
+                11))}
+  [state tile-name reinforcement-count]
+  (if-not (valid-reinforcement? state tile-name reinforcement-count)
+    (error "Invalid reinforcement")
+    (-> state
+        (update-tile tile-name :troop-count (fn [t] (+ t reinforcement-count))))))

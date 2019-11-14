@@ -67,27 +67,18 @@ Region bonuses scale throughout the course of the game.
 - [x] `attack-with-k`: attack until either territory taken or `k` friendly troops dead
 - [x] conquer a territory once no defenders remaining
 - [ ] troop movement after attack completed
+  - prompt player? need inputs specifying how many troops should be moved
 
 ## Sprint 2: Movement / Reinforcement
-- [ ] troop movement between nodes
-- [ ] reinforcing nodes with additional troops
-- [ ]
+- [x] troop movement between nodes
+- [x] reinforcing nodes with additional troops
+- [ ] track total number of reinforcements for a player in a round
 
-## Sprint 4: Setup phase
+## Sprint 3: Setup phase
 - set up the game by having players take turns seeding troops
 
-## Sprint 5: Game API
+## Sprint 4: Game API
 - [ ] phase- and player-turn- transitions
-
-## Sprint X: Card-trading
-- [x] determine valid trades
-- [ ] determine card trade-in value (formula & impl)
-  - trade-in value should go up by some rule:
-    - increase by constant (e.g. 2 cards) at every trade?
-    - increase by compounding rate (e.g. 10%) at every trade?
-    - increase at every turn?
-    - set as some fraction of the total number of troops on the board?
-- [ ] when a player captures the last territory of another player (i.e., when a player removes another player from the game), the attacker takes the defender's cards
 
 ## Miscellaneous
 - [x] (Optional) better testing map (shorter names, simpler layout, easy to understand)
