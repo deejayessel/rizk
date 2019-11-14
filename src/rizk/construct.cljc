@@ -422,3 +422,12 @@
     (filter (fn [group-name]
               (owns-group? state player-id group-name))
             group-names)))
+
+(defn troop-count
+  {:test (fn []
+           (is= (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 3)]}])
+                    (troop-count "i"))
+                3))}
+  [state tile-name]
+  {:pre [(map? state) (string? tile-name)]}
+  (get-in-tile state tile-name :troop-count))

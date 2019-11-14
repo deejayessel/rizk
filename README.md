@@ -62,9 +62,10 @@ Region bonuses scale throughout the course of the game.
 
 ## Sprint 1: Attack
 - [x] `attack-once`
-- [ ] `attack-k-times`
-- [ ] `attack-to-end`: attack until either the attacker or the defender has 0 troops remaining in src/dst nodes
-- [ ] `attack-with-k`: attack until either territory taken or `k` friendly troops dead
+- [x] `attack-k-times`
+- [x] `attack-till-end`: attack until either the attacker can no longer attack (<2 troops) or the defender has no troops remaining
+- [x] `attack-with-k`: attack until either territory taken or `k` friendly troops dead
+- [x] conquer a territory once no defenders remaining
 - [ ] troop movement after attack completed
 
 ## Sprint 2: Movement / Reinforcement
