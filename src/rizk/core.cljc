@@ -4,6 +4,7 @@
             [rizk.util :refer [non-neg-int?]]
             [rizk.random-state :refer [random-int]]
             [rizk.definitions :refer [get-all-tile-defns
+                                      get-in-defn
                                       get-tile-defn
                                       get-group-defn]]
             [rizk.construct :refer [active-player-id
@@ -19,29 +20,28 @@
                                     troop-count
                                     update-tile]]))
 
-(defn player-group-bonuses
-  "Returns the total group bonuses the player has."
+(defn player-reinforcement-bonus
+  "Returns a player's total reinforcement bonuses."
   {:test (fn []
            (is= (-> (create-game 2 [{:tiles ["i" "iii"]}
                                     {:tiles ["ii" "iii"]}])
-                    (player-group-bonuses "p1"))
+                    (player-reinforcement-bonus "p1"))
                 0)
            (is= (-> (create-game 2 [{:tiles ["i" "ii" "iii" "iv"]}])
-                    (player-group-bonuses "p1"))
+                    (player-reinforcement-bonus "p1"))
                 4))}
   [state player-id]
   {:pre [(map? state) (string? player-id)]}
   (->> (get-owned-groups state player-id)
-       (map (fn [group-name]
-              (let [group-defn (get-group-defn group-name)]
-                (:group-bonus group-defn))))
+       (map (fn [g] (get-in-defn g :group-bonus)))
        (apply +)))
 
 (defn reinforcement-count
   "Determines the number of reinforcements a given player receives on their turn.
-    Each player receives a minimum of 3 troops.  Otherwise, their reinforcement count
-    is determined by the number of tiles they have divided by 3. In addition to this,
-    they gain extra troops granted by any group bonuses."
+
+   Each player receives a minimum of 3 troops.  Otherwise, their reinforcement count
+   is determined by the number of tiles they have divided by 3. In addition to this,
+   they gain extra troops granted by any group bonuses."
   {:test (fn []
            (is= (-> (create-game 2 [{:tiles ["i" "ii"]}
                                     {:tiles ["iii" "iv"]}])
@@ -54,7 +54,7 @@
   {:pre [(map? state) (string? player-id)]}
   (let [tile-count (-> (get-tiles state player-id)
                        (count))
-        group-bonus (player-group-bonuses state player-id)]
+        group-bonus (player-reinforcement-bonus state player-id)]
     (+ (max 3 (quot tile-count 3))
        group-bonus)))
 
@@ -222,3 +222,45 @@
               (reduced state)))
           state
           (range)))
+
+(defn valid-move?
+  "Determines whether a troop movement is valid.
+
+  1. src and dst belong to the same player.
+  2. src owner is in turn.
+  3. turn is in movement phase
+  3. src and dst have at least one troop remaining at the end of the move."
+  ;TODO track troop movements to prevent units from moving more than 1
+  ; territory every turn
+  {:test (fn []
+           (is (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 2)
+                                            "ii"]}]
+                                :turn-phase :movement-phase)
+                   (valid-move? "i" "ii" 1))))}
+  [state src-name dst-name troop-quantity]
+  {:pre [(map? state) (string? src-name) (string? dst-name) (pos-int? troop-quantity)]}
+  (let [src-tile (get-tile state src-name)
+        dst-tile (get-tile state dst-name)]
+    (and (= (:owner-id src-tile)
+            (:owner-id dst-tile)
+            (active-player-id state))
+         (= (:turn-phase state)
+            :movement-phase)
+         (pos-int? (- (troop-count state src-name)
+                      troop-quantity)))))
+
+(defn move-k-troops
+  "Moves k troops from src to dst."
+  {:test (fn []
+           (let [state (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 5)
+                                                    "ii"]}]
+                                        :turn-phase :movement-phase)
+                           (move-k-troops "i" "ii" 3))]
+             (is= (troop-count state "i") 2)
+             (is= (troop-count state "ii") 4)))}
+  [state src-name dst-name k]
+  (if-not (valid-move? state src-name dst-name k)
+    (error "Invalid move")
+    (-> state
+        (update-tile src-name :troop-count (fn [t] (- t k)))
+        (update-tile dst-name :troop-count (fn [t] (+ t k))))))

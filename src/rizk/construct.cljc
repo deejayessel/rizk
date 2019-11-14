@@ -320,6 +320,25 @@
 (defn create-game
   "Creates a starting game state."
   {:test (fn []
+           (is= (create-game 2)
+                {:player-in-turn             "p1"
+                 :turn-phase                 :reinforcement-phase
+                 :seed                       -9203025489357073502
+                 :players                    ["p1" "p2"]
+                 :tiles                      {"i"   {:name        "i"
+                                                     :owner-id    "p1"
+                                                     :troop-count 1}
+                                              "ii"  {:name        "ii"
+                                                     :owner-id    "p2"
+                                                     :troop-count 1}
+                                              "iii" {:name        "iii"
+                                                     :owner-id    "p1"
+                                                     :troop-count 1}
+                                              "iv"  {:name        "iv"
+                                                     :owner-id    "p2"
+                                                     :troop-count 1}}
+                 :initial-army-size          20
+                 :initial-reinforcement-size 3})
            (is= (create-game 2 [{:tiles [(create-tile "i" :troop-count 10)
                                          "ii"]}
                                 {:tiles ["iii" "iv"]}]

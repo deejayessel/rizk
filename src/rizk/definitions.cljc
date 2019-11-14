@@ -44,7 +44,7 @@
   []
   (vals (deref definitions-atom)))
 
-(defn- get-definition
+(defn get-definition
   {:test (fn []
            (is= (get-definition "iv")
                 {:name        "iv"
@@ -68,6 +68,18 @@
     (when-not definition
       (error (str "The name " name-or-entity " does not exist. Are the definitions loaded?")))
     definition))
+
+(defn get-in-defn
+  {:test (fn []
+           (is= (get-in-defn "i" :entity-type)
+                :tile)
+           (error? (get-in-defn "Something that does not exist" :entity-type)))}
+  [name-or-entity key]
+  {:pre [(or (string? name-or-entity)
+             (and (map? name-or-entity)
+                  (contains? name-or-entity :name)))]}
+  (-> (get-definition name-or-entity)
+      (key)))
 
 (defn- get-entities-of-type
   {:test (fn []

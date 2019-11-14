@@ -90,4 +90,4 @@ Region bonuses scale throughout the course of the game.
 - [ ] when a player captures the last territory of another player (i.e., when a player removes another player from the game), the attacker takes the defender's cards
 
 ## Miscellaneous
-- [ ] (Optional) better testing map (shorter names, simpler layout, easy to understand)
+- [x] (Optional) better testing map (shorter names, simpler layout, easy to understand)
