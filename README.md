@@ -58,9 +58,9 @@ Region bonuses scale throughout the course of the game.
 ## Notes
 - Basic strategy: [http://web.mit.edu/sp.268/www/2010/risk.pdf](http://web.mit.edu/sp.268/www/2010/risk.pdf)
 
-# Sprints
+# Implementation TODOs
 
-## Sprint 1: Attack
+## Attack
 - [x] `attack-once`
 - [x] `attack-k-times`
 - [x] `attack-till-end`: attack until either the attacker can no longer attack (<2 troops) or the defender has no troops remaining
@@ -69,16 +69,14 @@ Region bonuses scale throughout the course of the game.
 - [ ] troop movement after attack completed
   - prompt player? need inputs specifying how many troops should be moved
 
-## Sprint 2: Movement / Reinforcement
+## Movement / Reinforcement
 - [x] troop movement between nodes
 - [x] reinforcing nodes with additional troops
 - [ ] track total number of reinforcements for a player in a round
 
-## Sprint 3: Setup phase
-- set up the game by having players take turns seeding troops
-
-## Sprint 4: Game API
-- [ ] phase- and player-turn- transitions
+## Infrastructure
+- [ ] set up the game by having players take turns seeding troops
+- [x] phase- and player-turn- transitions
 
 ## Miscellaneous
 - [x] (Optional) better testing map (shorter names, simpler layout, easy to understand)
