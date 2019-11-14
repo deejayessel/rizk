@@ -11,6 +11,8 @@
                                     get-tile
                                     get-tiles
                                     neighbors?
+                                    player-count
+                                    player-ids
                                     update-tile
                                     update-turn-phase]]
             [rizk.core :refer []]))
@@ -39,3 +41,24 @@
                          (error "Tried to advance past movement phase")
                          (phase {:reinforcement-phase :attack-phase
                                  :attack-phase        :movement-phase})))))
+
+(defn go-to-next-turn
+  "Moves onto the next player's turn."
+  {:test (fn []
+           (is= (-> (create-game 2)
+                    (go-to-next-turn)
+                    (active-player-id))
+                "p2")
+           (is= (-> (create-game 2)
+                    (go-to-next-turn)
+                    (go-to-next-turn)
+                    (active-player-id))
+                "p1"))}
+  [state]
+  {:pre [(map? state)]}
+  (let [active-id (active-player-id state)
+        player-ids (player-ids state)
+        next-id (->> (concat player-ids player-ids)
+                     (drop-while (fn [id] (not= id active-id)))
+                     (second))]
+    (assoc state :player-in-turn next-id)))

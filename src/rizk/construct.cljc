@@ -78,11 +78,11 @@
   [state]
   (:player-in-turn state))
 
-(defn players
+(defn player-ids
   "Returns the list of player names."
   {:test (fn []
            (is= (->> (create-empty-state 3)
-                     (players))
+                     (player-ids))
                 ["p1" "p2" "p3"]))}
   [state]
   {:pre [(map? state)]}
@@ -96,7 +96,7 @@
                 3))}
   [state]
   {:pre [(map? state)]}
-  (count (players state)))
+  (count (player-ids state)))
 
 (defn opponent-ids
   "Returns the ids of all opponents of the input player."
@@ -111,7 +111,7 @@
                  "p6" "p7" "p8" "p9"]))}
   [state player-id]
   {:pre [(map? state) (string? player-id)]}
-  (->> (players state)
+  (->> (player-ids state)
        (remove (fn [p] (= p player-id)))))
 
 (defn get-tiles
