@@ -383,13 +383,13 @@
                   :max-moves   1}])
            (is= (-> (create-empty-state 2)
                     (add-tile "p1" (create-tile "i" :units [(create-units 1 :moves-taken 1)]))
-                    (add-units "i" 2)
+                    (add-units "i" 2 2)
                     (get-in-tile "i" :units))
                 [{:unit-count  1
                   :moves-taken 1
                   :max-moves   1}
                  {:unit-count  2
-                  :moves-taken 0
+                  :moves-taken 2
                   :max-moves   1}]))}
   ([state tile-name n]
    {:pre [(map? state) (string? tile-name) (pos-int? n)]}
@@ -402,7 +402,7 @@
                          (filter (fn [t] (= moves (-> t :unit :moves-taken))))
                          (first))
          new-units (if-not i
-                     (conj units (create-units n))
+                     (conj units (create-units n :moves-taken moves))
                      (update-in units [i :unit-count] (fn [x] (+ x n))))]
      (update-tile state tile-name :units new-units))))
 
