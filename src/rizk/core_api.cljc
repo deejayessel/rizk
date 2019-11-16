@@ -1,19 +1,11 @@
 (ns rizk.core-api
   (:require [ysera.test :refer [is= is is-not error?]]
             [ysera.error :refer [error]]
-            [rizk.util :refer [dec-by]]
             [rizk.construct :refer [create-game
-                                    create-tile
                                     get-player-id-in-turn
-                                    get-in-tile
-                                    get-owned-groups
-                                    get-player-count
                                     get-player-ids
-                                    get-tile
                                     get-tiles
-                                    neighbors?
                                     neighbor-names
-                                    update-tile
                                     update-turn-phase]]
             [rizk.core :refer []]))
 

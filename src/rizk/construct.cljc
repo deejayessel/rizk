@@ -1,13 +1,9 @@
 (ns rizk.construct
   (:require [ysera.test :refer [is= is is-not error?]]
             [ysera.error :refer [error]]
-            [rizk.util :refer [int-or-else]]
             [rizk.definitions :refer [get-all-tile-defns
-                                      get-tile-defn
-                                      get-group-defn
-                                      get-group-defns]]
-            [rizk.random :refer [random-partition-with-seed]]
-            [clojure.set :refer [difference]]))
+                                      get-tile-defn]]
+            [rizk.random :refer [random-partition-with-seed]]))
 
 (defn create-empty-state
   "Creates an empty state."
@@ -34,15 +30,18 @@
 (defn create-unit
   {:test (fn []
            (is= (create-unit 3)
-                {:unit-count      3
-                 :moves-remaining 0})
-           (is= (create-unit 5 :moves-remaining 3)
-                {:unit-count      5
-                 :moves-remaining 3}))}
+                {:unit-count  3
+                 :moves-taken 0
+                 :max-moves   1})
+           (is= (create-unit 5 :moves-taken 1)
+                {:unit-count  5
+                 :moves-taken 1
+                 :max-moves   1}))}
   [count & kvs]
-  {:pre [(or (pos-int? count) (zero? count))]}
-  (let [unit {:unit-count      count
-              :moves-remaining 0}]
+  {:pre [(int? count) (>= count 0)]}
+  (let [unit {:unit-count  count
+              :moves-taken 0
+              :max-moves   1}]                              ;TODO? embed constant for :max-moves?\
     (if (empty? kvs)
       unit
       (apply assoc unit kvs))))
@@ -52,12 +51,14 @@
   {:test (fn []
            (is= (create-tile "i")
                 {:name  "i"
-                 :units [{:unit-count      1
-                          :moves-remaining 0}]})
+                 :units [{:unit-count  1
+                          :moves-taken 0
+                          :max-moves   1}]})
            (is= (create-tile "i" :units [(create-unit 2)])
                 {:name  "i"
-                 :units [{:unit-count      2
-                          :moves-remaining 0}]})
+                 :units [{:unit-count  2
+                          :moves-taken 0
+                          :max-moves   1}]})
            (error? (create-tile "Nonexistent tile")))}
   [tile-name & kvs]
   (let [definition (get-tile-defn tile-name)
@@ -192,8 +193,9 @@
                     (get-tile "i"))
                 {:name     "i"
                  :owner-id "p1"
-                 :units    [{:unit-count      1
-                             :moves-remaining 0}]}))}
+                 :units    [{:unit-count  1
+                             :moves-taken 0
+                             :max-moves   1}]}))}
   [state tile-name]
   {:pre [(map? state) (string? tile-name)]}
   (get-in state [:tiles tile-name]))
@@ -284,12 +286,12 @@
                     (count-units "i"))
                 1)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 3 :moves-remaining 2)
-                                                            (create-unit 4 :moves-remaining 0)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 3 :moves-taken 1)
+                                                            (create-unit 4 :moves-taken 0)]))
                     (count-units "i"))
                 7)
-           (is= (count-units [(create-unit 1 :moves-remaining 1)
-                              (create-unit 2 :moves-remaining 0)])
+           (is= (count-units [(create-unit 1 :moves-taken 1)
+                              (create-unit 2 :moves-taken 0)])
                 3))}
   ([state tile-name]
    {:pre [(map? state) (string? tile-name)]}
@@ -306,16 +308,17 @@
            (is= (-> (create-empty-state 2)
                     (add-tile "p1" (create-tile "i"))
                     (count-mobile-units "i"))
-                0)
+                1)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 3 :moves-remaining 2)
-                                                            (create-unit 4 :moves-remaining 0)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 4 :moves-taken 0)
+                                                            (create-unit 3 :moves-taken 1)]))
                     (count-mobile-units "i"))
-                3))}
+                4))}
   [state tile-name]
   {:pre [(map? state) (string? tile-name)]}
   (->> (get-in-tile state tile-name :units)
-       (remove (fn [t] (zero? (:moves-remaining t))))
+       (filter (fn [t] (< (:moves-taken t)
+                          (:max-moves t))))
        (map :unit-count)
        (reduce +)))
 
@@ -328,8 +331,8 @@
                     (count-units "i"))
                 0)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 2 :moves-remaining 0)
-                                                            (create-unit 3 :moves-remaining 1)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 2 :moves-taken 0)
+                                                            (create-unit 3 :moves-taken 1)]))
                     (remove-unit "i")
                     (count-units "i"))
                 4))}
@@ -355,10 +358,10 @@
                     (count-units "i"))
                 0)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-remaining 0)
-                                                            (create-unit 2 :moves-remaining 1)
-                                                            (create-unit 3 :moves-remaining 2)
-                                                            (create-unit 4 :moves-remaining 3)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-taken 0)
+                                                            (create-unit 2 :moves-taken 1)
+                                                            (create-unit 3 :moves-taken 2)
+                                                            (create-unit 4 :moves-taken 3)]))
                     (remove-units "i" 7)
                     (count-units "i"))
                 3))}
@@ -383,22 +386,27 @@
                     (count-units "i"))
                 2)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [{:unit-count 1
-                                                             :moves-remaining 0}]))
+                    (add-tile "p1" (create-tile "i" :units [{:unit-count  1
+                                                             :moves-taken 0
+                                                             :max-moves   1}]))
                     (add-unit "i")
                     (add-unit "i")
                     (get-in-tile "i" :units))
-                [{:unit-count 3
-                  :moves-remaining 0}])
+                [{:unit-count  3
+                  :moves-taken 0
+                  :max-moves   1}])
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [{:unit-count 1
-                                                             :moves-remaining 0}]))
+                    (add-tile "p1" (create-tile "i" :units [{:unit-count  1
+                                                             :moves-taken 0
+                                                             :max-moves   1}]))
                     (add-unit "i" 2)
                     (get-in-tile "i" :units))
-                [{:unit-count 1
-                  :moves-remaining 0}
-                 {:unit-count 1
-                  :moves-remaining 2}]))}
+                [{:unit-count  1
+                  :moves-taken 0
+                  :max-moves   1}
+                 {:unit-count  1
+                  :moves-taken 2
+                  :max-moves   1}]))}
   ([state tile-name]
    {:pre [(map? state) (string? tile-name)]}
    (add-unit state tile-name 0))
@@ -409,13 +417,13 @@
                             (map-indexed (fn [i u] {:index i
                                                     :unit  u})))
          match (->> indexed-units
-                    (filter (fn [t] (= moves (-> t :unit :moves-remaining))))
+                    (filter (fn [t] (= moves (-> t :unit :moves-taken))))
                     (first))
          units (if-not match
-                 (conj units (create-unit 1 :moves-remaining moves))
+                 (conj units (create-unit 1 :moves-taken moves))
                  (let [{i :index unit :unit} match
                        before (take i units)
-                       after  (drop (inc i) units)]
+                       after (drop (inc i) units)]
                    units (concat before
                                  [(update unit :unit-count inc)]
                                  after)))]
@@ -430,10 +438,10 @@
                     (count-units "i"))
                 11)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-remaining 0)
-                                                            (create-unit 2 :moves-remaining 1)
-                                                            (create-unit 3 :moves-remaining 2)
-                                                            (create-unit 4 :moves-remaining 3)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-taken 0)
+                                                            (create-unit 2 :moves-taken 1)
+                                                            (create-unit 3 :moves-taken 2)
+                                                            (create-unit 4 :moves-taken 3)]))
                     (add-units "i" 7)
                     (count-units "i"))
                 17))}
@@ -513,20 +521,24 @@
                  :players                    ["p1" "p2"]
                  :tiles                      {"i"   {:name     "i"
                                                      :owner-id "p1"
-                                                     :units    [{:unit-count      10
-                                                                 :moves-remaining 0}]}
+                                                     :units    [{:unit-count  10
+                                                                 :moves-taken 0
+                                                                 :max-moves   1}]}
                                               "ii"  {:name     "ii"
                                                      :owner-id "p1"
-                                                     :units    [{:unit-count      1
-                                                                 :moves-remaining 0}]}
+                                                     :units    [{:unit-count  1
+                                                                 :moves-taken 0
+                                                                 :max-moves   1}]}
                                               "iii" {:name     "iii"
                                                      :owner-id "p2"
-                                                     :units    [{:unit-count      1
-                                                                 :moves-remaining 0}]}
+                                                     :units    [{:unit-count  1
+                                                                 :moves-taken 0
+                                                                 :max-moves   1}]}
                                               "iv"  {:name     "iv"
                                                      :owner-id "p2"
-                                                     :units    [{:unit-count      1
-                                                                 :moves-remaining 0}]}}
+                                                     :units    [{:unit-count  1
+                                                                 :moves-taken 0
+                                                                 :max-moves   1}]}}
                  :initial-army-size          30
                  :initial-reinforcement-size 3}))}
   ([num-players]
@@ -552,60 +564,3 @@
      (if (empty? kvs)
        state
        (apply assoc state kvs)))))
-
-(defn neighbor-names
-  "Returns the names of all neighbors of the tile with the given name."
-  {:test (fn []
-           (is= (neighbor-names "i")
-                ["ii" "iv"]))}
-  [tile-name]
-  {:pre [(string? tile-name)]}
-  (let [tile-defn (get-tile-defn tile-name)]
-    (:neighbors tile-defn)))
-
-(defn neighbors?
-  "Returns true if the two tiles are neighbors, false otherwise."
-  {:test (fn []
-           (is (neighbors? "i"
-                           "ii"))
-           (is-not (neighbors? "i"
-                               "iii")))}
-  [tile-1-name tile-2-name]
-  {:pre [(string? tile-1-name) (string? tile-2-name)]}
-  (->> (neighbor-names tile-1-name)
-       (filter (fn [n] (= n tile-2-name)))
-       (first)
-       (some?)))
-
-(defn owns-group?
-  "Checks if a player owns a group."
-  {:test (fn []
-           (is-not (-> (create-game 2)
-                       (owns-group? "p1" "square")))
-           (is (-> (create-game 2 [{:tiles ["i" "ii" "iii" "iv"]}])
-                   (owns-group? "p1" "square"))))}
-  [state player-id group-name]
-  {:pre [(map? state) (string? player-id) (string? group-name)]}
-  (->> (get-group-defn group-name)
-       (:member-tiles)
-       (map (fn [name] (get-tile state name)))
-       (map :owner-id)
-       (filter (fn [owner-id] (not= owner-id
-                                    player-id)))
-       (empty?)))
-
-(defn get-owned-groups
-  "Returns the groups owned by the player."
-  {:test (fn []
-           (is= (-> (create-game 2)
-                    (get-owned-groups "p1"))
-                [])
-           (is= (-> (create-game 2 [{:tiles ["i" "ii" "iii" "iv"]}])
-                    (get-owned-groups "p1"))
-                ["square"]))}
-  [state player-id]
-  {:pre [(map? state) (string? player-id)]}
-  (let [group-names (map :name (get-group-defns))]
-    (filter (fn [group-name]
-              (owns-group? state player-id group-name))
-            group-names)))

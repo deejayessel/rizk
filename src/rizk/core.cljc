@@ -1,27 +1,79 @@
 (ns rizk.core
   (:require [ysera.test :refer [is= is is-not error?]]
             [ysera.error :refer [error]]
-            [rizk.util :refer [non-neg-int?]]
             [rizk.random-state :refer [random-int]]
-            [rizk.definitions :refer [get-all-tile-defns
-                                      get-in-defn
+            [rizk.definitions :refer [get-in-defn
                                       get-tile-defn
-                                      get-group-defn]]
-            [rizk.construct :refer [add-tiles
-                                    add-units
+                                      get-group-defn
+                                      get-group-defns]]
+            [rizk.construct :refer [add-units
                                     count-units
                                     create-game
                                     create-tile
                                     create-unit
                                     get-in-tile
-                                    get-owned-groups
                                     get-player-id-in-turn
                                     get-tile
                                     get-tiles
-                                    neighbor-names
-                                    neighbors?
                                     remove-units
                                     update-tile]]))
+
+(defn neighbor-names
+  "Returns the names of all neighbors of the tile with the given name."
+  {:test (fn []
+           (is= (neighbor-names "i")
+                ["ii" "iv"]))}
+  [tile-name]
+  {:pre [(string? tile-name)]}
+  (let [tile-defn (get-tile-defn tile-name)]
+    (:neighbors tile-defn)))
+
+(defn neighbors?
+  "Returns true if the two tiles are neighbors, false otherwise."
+  {:test (fn []
+           (is (neighbors? "i"
+                           "ii"))
+           (is-not (neighbors? "i"
+                               "iii")))}
+  [tile-1-name tile-2-name]
+  {:pre [(string? tile-1-name) (string? tile-2-name)]}
+  (->> (neighbor-names tile-1-name)
+       (filter (fn [n] (= n tile-2-name)))
+       (first)
+       (some?)))
+
+(defn owns-group?
+  "Checks if a player owns a group."
+  {:test (fn []
+           (is-not (-> (create-game 2)
+                       (owns-group? "p1" "square")))
+           (is (-> (create-game 2 [{:tiles ["i" "ii" "iii" "iv"]}])
+                   (owns-group? "p1" "square"))))}
+  [state player-id group-name]
+  {:pre [(map? state) (string? player-id) (string? group-name)]}
+  (->> (get-group-defn group-name)
+       (:member-tiles)
+       (map (fn [name] (get-tile state name)))
+       (map :owner-id)
+       (filter (fn [owner-id] (not= owner-id
+                                    player-id)))
+       (empty?)))
+
+(defn get-owned-groups
+  "Returns the groups owned by the player."
+  {:test (fn []
+           (is= (-> (create-game 2)
+                    (get-owned-groups "p1"))
+                [])
+           (is= (-> (create-game 2 [{:tiles ["i" "ii" "iii" "iv"]}])
+                    (get-owned-groups "p1"))
+                ["square"]))}
+  [state player-id]
+  {:pre [(map? state) (string? player-id)]}
+  (let [group-names (map :name (get-group-defns))]
+    (filter (fn [group-name]
+              (owns-group? state player-id group-name))
+            group-names)))
 
 (comment replenish-unit-moves)
 
