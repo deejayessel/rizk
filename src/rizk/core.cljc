@@ -10,7 +10,7 @@
                                     count-units
                                     create-game
                                     create-tile
-                                    create-unit
+                                    create-units
                                     get-in-tile
                                     get-player-id-in-turn
                                     get-tile
@@ -140,13 +140,13 @@
              ; Territories must be neighbors
              (is-not (valid-attack? state "i" "iii")))
            ; Must be in attack phase
-           (is-not (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 2)])
+           (is-not (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 2)])
                                                 "iii"]}
                                        {:tiles ["ii" "iii"]}]
                                     :turn-phase :movement-phase)
                        (valid-attack? "i" "ii")))
            ; Valid attack
-           (is (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 2)])
+           (is (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 2)])
                                             "iii"]}
                                    {:tiles ["ii" "iii"]}]
                                 :turn-phase :attack-phase)
@@ -168,8 +168,8 @@
 
   (defn conquer-tile
     {:test (fn []
-             (let [state (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 2)])]}
-                                             {:tiles [(create-tile "ii" :units [(create-unit 0)])]}])
+             (let [state (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 2)])]}
+                                             {:tiles [(create-tile "ii" :units [(create-units 0)])]}])
                              (conquer-tile "i" "ii"))]
                (is= (get-in-tile state "ii" :owner-id)
                     "p1")
@@ -294,7 +294,7 @@
   ;TODO track unit movements to prevent units from moving more than 1
   ; territory every turn
   {:test (fn []
-           (is (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 2)])
+           (is (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 2)])
                                             "ii"]}]
                                 :turn-phase :movement-phase)
                    (valid-move? "i" "ii" 1))))}
@@ -310,25 +310,25 @@
          (pos-int? (- (count-units state src-name)
                       unit-count)))))
 
-(defn move-k-units
+(defn move-units
   "Moves k units from src to dst."
   {:test (fn []
            ; Valid move
-           (let [state (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 5)])
+           (let [state (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 5)])
                                                     "ii"]}]
                                         :turn-phase :movement-phase)
-                           (move-k-units "i" "ii" 3))]
+                           (move-units "i" "ii" 3))]
              (is= (count-units state "i") 2)
              (is= (count-units state "ii") 4))
            ; Cannot move units to unowned territory
-           (error? (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 3)])
+           (error? (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 3)])
                                                 "ii"]}
                                        {:tiles ["iii" "iv"]}])
-                       (move-k-units "i" "iii" 1)))
+                       (move-units "i" "iii" 1)))
            ; Cannot move more units than in src
-           (error? (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 3)])
+           (error? (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 3)])
                                                 "ii"]}])
-                       (move-k-units "i" "ii" 10))))}
+                       (move-units "i" "ii" 10))))}
   [state src-name dst-name k]
   (if-not (valid-move? state src-name dst-name k)
     (error "Invalid move")
@@ -363,12 +363,13 @@
 (defn reinforce-tile
   "Adds units to a tile."
   {:test (fn []
-           (is= (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 1)])]}]
+           (is= (-> (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 1)])]}]
                                  :turn-phase :reinforcement-phase)
                     (reinforce-tile "i" 10)
                     (count-units "i"))
                 11))}
   [state tile-name reinforcement-count]
+  {:pre [(map? state) (string? tile-name) (pos-int? reinforcement-count)]}
   (if-not (valid-reinforcement? state tile-name reinforcement-count)
     (error "Invalid reinforcement")
     (add-units state tile-name reinforcement-count)))

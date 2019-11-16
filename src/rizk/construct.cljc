@@ -27,13 +27,13 @@
    :initial-army-size          20
    :initial-reinforcement-size 3})
 
-(defn create-unit
+(defn create-units
   {:test (fn []
-           (is= (create-unit 3)
+           (is= (create-units 3)
                 {:unit-count  3
                  :moves-taken 0
                  :max-moves   1})
-           (is= (create-unit 5 :moves-taken 1)
+           (is= (create-units 5 :moves-taken 1)
                 {:unit-count  5
                  :moves-taken 1
                  :max-moves   1}))}
@@ -54,7 +54,7 @@
                  :units [{:unit-count  1
                           :moves-taken 0
                           :max-moves   1}]})
-           (is= (create-tile "i" :units [(create-unit 2)])
+           (is= (create-tile "i" :units [(create-units 2)])
                 {:name  "i"
                  :units [{:unit-count  2
                           :moves-taken 0
@@ -63,7 +63,7 @@
   [tile-name & kvs]
   (let [definition (get-tile-defn tile-name)
         tile {:name  tile-name
-              :units [(create-unit 1)]}]
+              :units [(create-units 1)]}]
     (if (nil? definition)
       (error "Couldn't get definition of " tile-name ". Are definitions loaded?")
       (if (empty? kvs)
@@ -215,7 +215,7 @@
   "Adds new-tile into the state, removing any other tile that shares the same name."
   {:test (fn []
            (let [new-tile (create-tile "i"
-                                       :units [(create-unit 5)]
+                                       :units [(create-units 5)]
                                        :owner-id "p2")]
              (is= (-> (create-empty-state 2)
                       (add-tile "p1" (create-tile "i"))
@@ -230,10 +230,10 @@
   "Replaces multiple tiles."
   {:test (fn []
            (let [new-tiles [(create-tile "i"
-                                         :units (create-unit 5)
+                                         :units (create-units 5)
                                          :owner-id "p2")
                             (create-tile "ii"
-                                         :unit (create-unit 7)
+                                         :unit (create-units 7)
                                          :owner-id "p2")]
                  state (-> (create-empty-state 2)
                            (add-tiles "p1" [(create-tile "i")
@@ -286,12 +286,12 @@
                     (count-units "i"))
                 1)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 3 :moves-taken 1)
-                                                            (create-unit 4 :moves-taken 0)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-units 3 :moves-taken 1)
+                                                            (create-units 4 :moves-taken 0)]))
                     (count-units "i"))
                 7)
-           (is= (count-units [(create-unit 1 :moves-taken 1)
-                              (create-unit 2 :moves-taken 0)])
+           (is= (count-units [(create-units 1 :moves-taken 1)
+                              (create-units 2 :moves-taken 0)])
                 3))}
   ([state tile-name]
    {:pre [(map? state) (string? tile-name)]}
@@ -310,8 +310,8 @@
                     (count-mobile-units "i"))
                 1)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 4 :moves-taken 0)
-                                                            (create-unit 3 :moves-taken 1)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-units 4 :moves-taken 0)
+                                                            (create-units 3 :moves-taken 1)]))
                     (count-mobile-units "i"))
                 4))}
   [state tile-name]
@@ -322,35 +322,11 @@
        (map :unit-count)
        (reduce +)))
 
-(defn remove-unit
-  "Removes a single unit from a tile."
-  {:test (fn []
-           (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i"))
-                    (remove-unit "i")
-                    (count-units "i"))
-                0)
-           (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 2 :moves-taken 0)
-                                                            (create-unit 3 :moves-taken 1)]))
-                    (remove-unit "i")
-                    (count-units "i"))
-                4))}
-  [state tile-name]
-  {:pre [(map? state) (string? tile-name)]}
-  (if (zero? (count-units state tile-name))
-    state                                                   ; Do nothing if the tile has no units remaining
-    (let [units (->> (get-in-tile state tile-name :units)
-                     (remove (fn [t] (zero? (:unit-count t)))))
-          unit (-> (first units)
-                   (update :unit-count dec))
-          new-units (if (zero? (:unit-count unit))
-                      (rest units)
-                      (conj (rest units) unit))]
-      (update-tile state tile-name :units new-units))))
-
 (defn remove-units
-  "Removes units from a tile."
+  "Removes k units from a tile.
+
+  Removing units will only happen when a player is in the attack phase, so
+  :units will only contain one map where :moves-taken = 0."
   {:test (fn []
            (is= (-> (create-empty-state 2)
                     (add-tile "p1" (create-tile "i"))
@@ -358,101 +334,77 @@
                     (count-units "i"))
                 0)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-taken 0)
-                                                            (create-unit 2 :moves-taken 1)
-                                                            (create-unit 3 :moves-taken 2)
-                                                            (create-unit 4 :moves-taken 3)]))
+                    (add-tile "p1" (create-tile "i" :units [(create-units 10 :moves-taken 0)]))
                     (remove-units "i" 7)
                     (count-units "i"))
-                3))}
+                3)
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [(create-units 10 :moves-taken 0)]))
+                    (remove-units "i" 10)
+                    (get-in-tile "i" :units))
+                [])
+           (error? (-> (create-empty-state 2)
+                       (add-tile "p1" (create-tile "i"))
+                       (remove-units "i" 3)))
+           (error? (-> (create-empty-state 2)
+                       (add-tile "p1" (create-tile "i" :units [(create-units 10 :moves-taken 0)
+                                                               (create-units 10 :moves-taken 1)]))
+                       (remove-units "i" 7))))}
   [state tile-name k]
-  {:pre [(map? state) (string? tile-name) (pos-int? k)
-         (>= (count-units state tile-name) k)]}
-  (reduce (fn [state _]
-            (if (zero? (count-units state tile-name))
-              (reduced state)
-              (remove-unit state tile-name)))
-          state
-          (range k)))
+  {:pre [(map? state) (string? tile-name) (pos-int? k)]}
+  (cond
+    (> k (count-units state tile-name))
+    (error "Attempted to remove more units than available")
 
-(defn add-unit
-  "Adds one unit to a tile.
+    (>= (-> (get-in-tile state tile-name :units)
+            (count))
+        2)
+    (error "Attempted to remove troops without consolidating units")
 
-  By default, the unit has no moves remaining."
+    :else
+    (update-tile state tile-name :units
+                 (fn [us] (->> (update-in us [0 :unit-count] (fn [x] (- x k)))
+                               (remove (fn [u] (zero? (:unit-count u)))))))))
+
+(defn add-units
+  "Adds n units to a tile."
   {:test (fn []
            (is= (-> (create-empty-state 2)
                     (add-tile "p1" (create-tile "i"))
-                    (add-unit "i")
+                    (add-units "i" 1)
                     (count-units "i"))
                 2)
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [{:unit-count  1
-                                                             :moves-taken 0
-                                                             :max-moves   1}]))
-                    (add-unit "i")
-                    (add-unit "i")
+                    (add-tile "p1" (create-tile "i" :units [(create-units 1)]))
+                    (add-units "i" 5)
                     (get-in-tile "i" :units))
-                [{:unit-count  3
+                [{:unit-count  6
                   :moves-taken 0
                   :max-moves   1}])
            (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [{:unit-count  1
-                                                             :moves-taken 0
-                                                             :max-moves   1}]))
-                    (add-unit "i" 2)
+                    (add-tile "p1" (create-tile "i" :units [(create-units 1 :moves-taken 1)]))
+                    (add-units "i" 2)
                     (get-in-tile "i" :units))
                 [{:unit-count  1
-                  :moves-taken 0
+                  :moves-taken 1
                   :max-moves   1}
-                 {:unit-count  1
-                  :moves-taken 2
+                 {:unit-count  2
+                  :moves-taken 0
                   :max-moves   1}]))}
-  ([state tile-name]
-   {:pre [(map? state) (string? tile-name)]}
-   (add-unit state tile-name 0))
-  ([state tile-name moves]
-   {:pre [(map? state) (string? tile-name) (or (zero? moves) (pos-int? moves))]}
+  ([state tile-name n]
+   {:pre [(map? state) (string? tile-name) (pos-int? n)]}
+   (add-units state tile-name n 0))
+  ([state tile-name n moves]
+   {:pre [(map? state) (string? tile-name) (pos-int? n) (int? moves) (>= moves 0)]}
    (let [units (get-in-tile state tile-name :units)
-         indexed-units (->> units
-                            (map-indexed (fn [i u] {:index i
-                                                    :unit  u})))
-         match (->> indexed-units
-                    (filter (fn [t] (= moves (-> t :unit :moves-taken))))
-                    (first))
-         units (if-not match
-                 (conj units (create-unit 1 :moves-taken moves))
-                 (let [{i :index unit :unit} match
-                       before (take i units)
-                       after (drop (inc i) units)]
-                   units (concat before
-                                 [(update unit :unit-count inc)]
-                                 after)))]
-     (update-tile state tile-name :units units))))
-
-(defn add-units
-  "Adds units to a tile."
-  {:test (fn []
-           (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i"))
-                    (add-units "i" 10)
-                    (count-units "i"))
-                11)
-           (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-taken 0)
-                                                            (create-unit 2 :moves-taken 1)
-                                                            (create-unit 3 :moves-taken 2)
-                                                            (create-unit 4 :moves-taken 3)]))
-                    (add-units "i" 7)
-                    (count-units "i"))
-                17))}
-  [state tile-name k]
-  {:pre [(map? state) (string? tile-name) (pos-int? k)]}
-  (reduce (fn [state _]
-            (add-unit state tile-name))
-          state
-          (range k)))
-
-(comment add-units)
+         {i :index} (->> units
+                         (map-indexed (fn [i u] {:index i :unit u}))
+                         (filter (fn [t] (= moves (-> t :unit :moves-taken))))
+                         (first))
+         new-units (if-not i
+                     (conj units (create-units n))
+                     (update-in units [i :unit-count] (fn [x] (+ x n))))]
+     (update-tile state tile-name :units new-units))))
 
 (defn randomly-assign-tiles
   "Randomly assigns tiles to the players in the game.
@@ -511,7 +463,7 @@
 (defn create-game
   "Creates a starting game state."
   {:test (fn []
-           (is= (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 10)])
+           (is= (create-game 2 [{:tiles [(create-tile "i" :units [(create-units 10)])
                                          "ii"]}
                                 {:tiles ["iii" "iv"]}]
                              :initial-army-size 30)
