@@ -31,21 +31,38 @@
    :initial-army-size          20
    :initial-reinforcement-size 3})
 
+(defn create-unit
+  {:test (fn []
+           (is= (create-unit 3)
+                {:unit-count      3
+                 :moves-remaining 0})
+           (is= (create-unit 5 :moves-remaining 3)
+                {:unit-count      5
+                 :moves-remaining 3}))}
+  [count & kvs]
+  {:pre [(or (pos-int? count) (zero? count))]}
+  (let [unit {:unit-count      count
+              :moves-remaining 0}]
+    (if (empty? kvs)
+      unit
+      (apply assoc unit kvs))))
+
 (defn create-tile
   "Creates a tile without owner-id."
   {:test (fn []
            (is= (create-tile "i")
-                {:name        "i"
-                 :troop-count 1})
-           (is= (create-tile "i" :troop-count 2)
-                {:name        "i"
-                 :troop-count 2})
-           (error? (create-tile "Williamstown")))}
+                {:name  "i"
+                 :units [{:unit-count      1
+                          :moves-remaining 0}]})
+           (is= (create-tile "i" :units [(create-unit 2)])
+                {:name  "i"
+                 :units [{:unit-count      2
+                          :moves-remaining 0}]})
+           (error? (create-tile "Nonexistent tile")))}
   [tile-name & kvs]
   (let [definition (get-tile-defn tile-name)
-        {troop-count :troop-count} kvs
-        tile {:name        tile-name
-              :troop-count (int-or-else troop-count 1)}]
+        tile {:name  tile-name
+              :units [(create-unit 1)]}]
     (if (nil? definition)
       (error "Couldn't get definition of " tile-name ". Are definitions loaded?")
       (if (empty? kvs)
@@ -69,7 +86,7 @@
     (update state :turn-phase fn-or-val)
     (assoc state :turn-phase fn-or-val)))
 
-(defn active-player-id
+(defn get-player-id-in-turn
   "Returns the id of the player in turn."
   {:test (fn []
            (is= (-> (create-empty-state 2)
@@ -78,40 +95,40 @@
   [state]
   (:player-in-turn state))
 
-(defn player-ids
+(defn get-player-ids
   "Returns the list of player names."
   {:test (fn []
            (is= (->> (create-empty-state 3)
-                     (player-ids))
+                     (get-player-ids))
                 ["p1" "p2" "p3"]))}
   [state]
   {:pre [(map? state)]}
   (:players state))
 
-(defn player-count
+(defn get-player-count
   "Returns the number of players in the state."
   {:test (fn []
            (is= (-> (create-empty-state 3)
-                    (player-count))
+                    (get-player-count))
                 3))}
   [state]
   {:pre [(map? state)]}
-  (count (player-ids state)))
+  (count (get-player-ids state)))
 
-(defn opponent-ids
+(defn get-opponent-ids
   "Returns the ids of all opponents of the input player."
   {:test (fn []
            (is= (-> (create-empty-state 2)
-                    (opponent-ids "p1"))
+                    (get-opponent-ids "p1"))
                 ["p2"])
            (is= (-> (create-empty-state 9)
-                    (opponent-ids "p5")
+                    (get-opponent-ids "p5")
                     (sort))
                 ["p1" "p2" "p3" "p4"
                  "p6" "p7" "p8" "p9"]))}
   [state player-id]
   {:pre [(map? state) (string? player-id)]}
-  (->> (player-ids state)
+  (->> (get-player-ids state)
        (remove (fn [p] (= p player-id)))))
 
 (defn get-tiles
@@ -173,9 +190,10 @@
            (is= (-> (create-empty-state 2)
                     (add-tile "p1" (create-tile "i"))
                     (get-tile "i"))
-                {:name        "i"
-                 :owner-id    "p1"
-                 :troop-count 1}))}
+                {:name     "i"
+                 :owner-id "p1"
+                 :units    [{:unit-count      1
+                             :moves-remaining 0}]}))}
   [state tile-name]
   {:pre [(map? state) (string? tile-name)]}
   (get-in state [:tiles tile-name]))
@@ -195,7 +213,7 @@
   "Adds new-tile into the state, removing any other tile that shares the same name."
   {:test (fn []
            (let [new-tile (create-tile "i"
-                                       :troop-count 5
+                                       :units [(create-unit 5)]
                                        :owner-id "p2")]
              (is= (-> (create-empty-state 2)
                       (add-tile "p1" (create-tile "i"))
@@ -210,10 +228,10 @@
   "Replaces multiple tiles."
   {:test (fn []
            (let [new-tiles [(create-tile "i"
-                                         :troop-count 5
+                                         :units (create-unit 5)
                                          :owner-id "p2")
                             (create-tile "ii"
-                                         :troop-count 7
+                                         :unit (create-unit 7)
                                          :owner-id "p2")]
                  state (-> (create-empty-state 2)
                            (add-tiles "p1" [(create-tile "i")
@@ -241,32 +259,196 @@
                     (get-tile "i")
                     (:owner-id))
                 "p2")
-           ; update troop count
-           (is= (-> (create-empty-state 2)
-                    (add-tile "p1" (create-tile "i"))
-                    (update-tile "i" :troop-count 3)
-                    (get-tile "i")
-                    (:troop-count))
-                3)
            ; update with function
            (is= (-> (create-empty-state 2)
                     (add-tile "p1" (create-tile "i"))
-                    (update-tile "i" :troop-count inc)
+                    (update-tile "i" :owner-id (fn [_] "p2"))
                     (get-tile "i")
-                    (:troop-count))
-                2))}
+                    (:owner-id))
+                "p2"))}
   [state tile-name key fn-or-val]
   {:pre [(map? state) (string? tile-name) (keyword? key) (or (fn? fn-or-val)
                                                              (pos-int? fn-or-val)
-                                                             (string? fn-or-val))]}
+                                                             (string? fn-or-val)
+                                                             (coll? fn-or-val))]}
   (let [tile (get-tile state tile-name)]
     (replace-tile state (if (fn? fn-or-val)
                           (update tile key fn-or-val)
                           (assoc tile key fn-or-val)))))
 
+(defn count-units
+  "Counts the number of units in a tile."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i"))
+                    (count-units "i"))
+                1)
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 3 :moves-remaining 2)
+                                                            (create-unit 4 :moves-remaining 0)]))
+                    (count-units "i"))
+                7)
+           (is= (count-units [(create-unit 1 :moves-remaining 1)
+                              (create-unit 2 :moves-remaining 0)])
+                3))}
+  ([state tile-name]
+   {:pre [(map? state) (string? tile-name)]}
+   (count-units (get-in-tile state tile-name :units)))
+  ([units]
+   {:pre [(coll? units) (every? map? units)]}
+   (->> units
+        (map :unit-count)
+        (reduce +))))
+
+(defn count-mobile-units
+  "Counts the number of units sitting in the tile with moves remaining."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i"))
+                    (count-mobile-units "i"))
+                0)
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 3 :moves-remaining 2)
+                                                            (create-unit 4 :moves-remaining 0)]))
+                    (count-mobile-units "i"))
+                3))}
+  [state tile-name]
+  {:pre [(map? state) (string? tile-name)]}
+  (->> (get-in-tile state tile-name :units)
+       (remove (fn [t] (zero? (:moves-remaining t))))
+       (map :unit-count)
+       (reduce +)))
+
+(defn remove-unit
+  "Removes a single unit from a tile."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i"))
+                    (remove-unit "i")
+                    (count-units "i"))
+                0)
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 2 :moves-remaining 0)
+                                                            (create-unit 3 :moves-remaining 1)]))
+                    (remove-unit "i")
+                    (count-units "i"))
+                4))}
+  [state tile-name]
+  {:pre [(map? state) (string? tile-name)]}
+  (if (zero? (count-units state tile-name))
+    state                                                   ; Do nothing if the tile has no units remaining
+    (let [units (->> (get-in-tile state tile-name :units)
+                     (remove (fn [t] (zero? (:unit-count t)))))
+          unit (-> (first units)
+                   (update :unit-count dec))
+          new-units (if (zero? (:unit-count unit))
+                      (rest units)
+                      (conj (rest units) unit))]
+      (update-tile state tile-name :units new-units))))
+
+(defn remove-units
+  "Removes units from a tile."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i"))
+                    (remove-units "i" 1)
+                    (count-units "i"))
+                0)
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-remaining 0)
+                                                            (create-unit 2 :moves-remaining 1)
+                                                            (create-unit 3 :moves-remaining 2)
+                                                            (create-unit 4 :moves-remaining 3)]))
+                    (remove-units "i" 7)
+                    (count-units "i"))
+                3))}
+  [state tile-name k]
+  {:pre [(map? state) (string? tile-name) (pos-int? k)
+         (>= (count-units state tile-name) k)]}
+  (reduce (fn [state _]
+            (if (zero? (count-units state tile-name))
+              (reduced state)
+              (remove-unit state tile-name)))
+          state
+          (range k)))
+
+(defn add-unit
+  "Adds one unit to a tile.
+
+  By default, the unit has no moves remaining."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i"))
+                    (add-unit "i")
+                    (count-units "i"))
+                2)
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [{:unit-count 1
+                                                             :moves-remaining 0}]))
+                    (add-unit "i")
+                    (add-unit "i")
+                    (get-in-tile "i" :units))
+                [{:unit-count 3
+                  :moves-remaining 0}])
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [{:unit-count 1
+                                                             :moves-remaining 0}]))
+                    (add-unit "i" 2)
+                    (get-in-tile "i" :units))
+                [{:unit-count 1
+                  :moves-remaining 0}
+                 {:unit-count 1
+                  :moves-remaining 2}]))}
+  ([state tile-name]
+   {:pre [(map? state) (string? tile-name)]}
+   (add-unit state tile-name 0))
+  ([state tile-name moves]
+   {:pre [(map? state) (string? tile-name) (or (zero? moves) (pos-int? moves))]}
+   (let [units (get-in-tile state tile-name :units)
+         indexed-units (->> units
+                            (map-indexed (fn [i u] {:index i
+                                                    :unit  u})))
+         match (->> indexed-units
+                    (filter (fn [t] (= moves (-> t :unit :moves-remaining))))
+                    (first))
+         units (if-not match
+                 (conj units (create-unit 1 :moves-remaining moves))
+                 (let [{i :index unit :unit} match
+                       before (take i units)
+                       after  (drop (inc i) units)]
+                   units (concat before
+                                 [(update unit :unit-count inc)]
+                                 after)))]
+     (update-tile state tile-name :units units))))
+
+(defn add-units
+  "Adds units to a tile."
+  {:test (fn []
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i"))
+                    (add-units "i" 10)
+                    (count-units "i"))
+                11)
+           (is= (-> (create-empty-state 2)
+                    (add-tile "p1" (create-tile "i" :units [(create-unit 1 :moves-remaining 0)
+                                                            (create-unit 2 :moves-remaining 1)
+                                                            (create-unit 3 :moves-remaining 2)
+                                                            (create-unit 4 :moves-remaining 3)]))
+                    (add-units "i" 7)
+                    (count-units "i"))
+                17))}
+  [state tile-name k]
+  {:pre [(map? state) (string? tile-name) (pos-int? k)]}
+  (reduce (fn [state _]
+            (add-unit state tile-name))
+          state
+          (range k)))
+
+(comment add-units)
+
 (defn randomly-assign-tiles
   "Randomly assigns tiles to the players in the game.
-  Each assigned tile has 1 troop present.
+  Each assigned tile has 1 unit present.
   In the case that the number of players does not divide the number of
   tiles, no two players should have a tile-count differing by more than 1."
   {:test (fn []
@@ -286,11 +468,12 @@
                     (get-tiles)
                     (every? (fn [t] (contains? t :owner-id)))
                     ))
-           ; All tiles have 1 troop count
-           (is (->> (create-empty-state 3)
-                    (randomly-assign-tiles)
-                    (get-tiles)
-                    (every? (fn [t] (= (:troop-count t) 1)))))
+           ; All tiles have 1 unit count
+           (is (as-> (create-empty-state 3) $
+                     (randomly-assign-tiles $)
+                     (every? (fn [t] (= (count-units $ (:name t))
+                                        1))
+                             (get-tiles $))))
            ; Randomly assign on subset of tiles
            (is= (->> (randomly-assign-tiles (create-empty-state 3)
                                             ["i" "ii"])
@@ -305,7 +488,7 @@
   ([state tile-names]
    {:pre [(map? state) (every? string? tile-names)]}
    (let [seed (:seed state)
-         player-count (player-count state)
+         player-count (get-player-count state)
          [seed tile-name-partns] (random-partition-with-seed seed player-count tile-names)
          state (assoc state :seed seed)                     ;update seed in state
          indexed-partns (map-indexed (fn [index part] {:player-id (str "p" (inc index))
@@ -320,26 +503,7 @@
 (defn create-game
   "Creates a starting game state."
   {:test (fn []
-           (is= (create-game 2)
-                {:player-in-turn             "p1"
-                 :turn-phase                 :reinforcement-phase
-                 :seed                       -9203025489357073502
-                 :players                    ["p1" "p2"]
-                 :tiles                      {"i"   {:name        "i"
-                                                     :owner-id    "p1"
-                                                     :troop-count 1}
-                                              "ii"  {:name        "ii"
-                                                     :owner-id    "p2"
-                                                     :troop-count 1}
-                                              "iii" {:name        "iii"
-                                                     :owner-id    "p1"
-                                                     :troop-count 1}
-                                              "iv"  {:name        "iv"
-                                                     :owner-id    "p2"
-                                                     :troop-count 1}}
-                 :initial-army-size          20
-                 :initial-reinforcement-size 3})
-           (is= (create-game 2 [{:tiles [(create-tile "i" :troop-count 10)
+           (is= (create-game 2 [{:tiles [(create-tile "i" :units [(create-unit 10)])
                                          "ii"]}
                                 {:tiles ["iii" "iv"]}]
                              :initial-army-size 30)
@@ -347,18 +511,22 @@
                  :turn-phase                 :reinforcement-phase
                  :seed                       -9203025489357073502
                  :players                    ["p1" "p2"]
-                 :tiles                      {"i"   {:name        "i"
-                                                     :owner-id    "p1"
-                                                     :troop-count 10}
-                                              "ii"  {:name        "ii"
-                                                     :owner-id    "p1"
-                                                     :troop-count 1}
-                                              "iii" {:name        "iii"
-                                                     :owner-id    "p2"
-                                                     :troop-count 1}
-                                              "iv"  {:name        "iv"
-                                                     :owner-id    "p2"
-                                                     :troop-count 1}}
+                 :tiles                      {"i"   {:name     "i"
+                                                     :owner-id "p1"
+                                                     :units    [{:unit-count      10
+                                                                 :moves-remaining 0}]}
+                                              "ii"  {:name     "ii"
+                                                     :owner-id "p1"
+                                                     :units    [{:unit-count      1
+                                                                 :moves-remaining 0}]}
+                                              "iii" {:name     "iii"
+                                                     :owner-id "p2"
+                                                     :units    [{:unit-count      1
+                                                                 :moves-remaining 0}]}
+                                              "iv"  {:name     "iv"
+                                                     :owner-id "p2"
+                                                     :units    [{:unit-count      1
+                                                                 :moves-remaining 0}]}}
                  :initial-army-size          30
                  :initial-reinforcement-size 3}))}
   ([num-players]
@@ -441,12 +609,3 @@
     (filter (fn [group-name]
               (owns-group? state player-id group-name))
             group-names)))
-
-(defn get-troop-count
-  {:test (fn []
-           (is= (-> (create-game 2 [{:tiles [(create-tile "i" :troop-count 3)]}])
-                    (get-troop-count "i"))
-                3))}
-  [state tile-name]
-  {:pre [(map? state) (string? tile-name)]}
-  (get-in-tile state tile-name :troop-count))
